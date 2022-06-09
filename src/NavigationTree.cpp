@@ -6,47 +6,19 @@
 #include <ShlObj.h>
 #include <ShlObj_core.h>
 #include <KnownFolders.h>
+#include <commoncontrols.h>
+
+#include "MainWindow.h"
 
 int g_nOpen, g_nClosed, g_nDocument;
+HIMAGELIST himagelist;
 
-BOOL InitTreeViewImageLists(HWND hwnd) 
+void InitTreeViewImageLists(HWND hwnd) 
 { 
-    HIMAGELIST himl;  // handle to image list 
-    HBITMAP hbmp;     // handle to bitmap 
-
-    // Create the image list. 
-    if ((himl = ImageList_Create(32, 
-                                 32,
-                                 FALSE, 
-                                 3, 0)) == NULL) 
-        return FALSE; 
-
-
-    HMODULE hMod = GetModuleHandleW(L"C:\\Windows\\system32\\shell32.dll");
-
-    // Add the open file, closed file, and document bitmaps. 
-    hbmp = LoadBitmap(hMod, MAKEINTRESOURCE(1)); 
-    g_nOpen = ImageList_Add(himl, hbmp, (HBITMAP)NULL); 
-    DeleteObject(hbmp); 
- 
-    hbmp = LoadBitmap(hMod, MAKEINTRESOURCE(2)); 
-    g_nClosed = ImageList_Add(himl, hbmp, (HBITMAP)NULL); 
-    DeleteObject(hbmp); 
-
-    hbmp = LoadBitmap(hMod, MAKEINTRESOURCE(3)); 
-    g_nDocument = ImageList_Add(himl, hbmp, (HBITMAP)NULL); 
-    DeleteObject(hbmp); 
-
-    // Fail if not all of the images were added. 
-    if (ImageList_GetImageCount(himl) < 3) 
-        return FALSE; 
+    SHGetImageList(SHIL_SMALL, IID_IImageList, (void **)&himagelist);
 
     // Associate the image list with the tree-view control. 
-    TreeView_SetImageList(hwnd, himl, TVSIL_NORMAL); 
-
-    DeleteObject(hMod);
-
-    return TRUE; 
+    TreeView_SetImageList(hwnd, himagelist, TVSIL_NORMAL); 
 }
 
 HWND CreateNavigationTree(HWND parent, HINSTANCE hInstance, RECT *rc)
@@ -54,11 +26,11 @@ HWND CreateNavigationTree(HWND parent, HINSTANCE hInstance, RECT *rc)
     RECT rcClient;
 
     GetClientRect(parent, &rcClient);
-    HWND hwnd = CreateWindowExW(
+    HWND hwnd_tree = CreateWindowExW(
         NULL // dwExStyle
         , L"SysTreeView32" // lpClassName
         , L"Navigation Tree" //lpWindowName
-        ,WS_VISIBLE | WS_CHILD | WS_BORDER | TVS_HASLINES | TVS_HASBUTTONS | TVS_LINESATROOT // dwStyle
+        ,WS_VISIBLE | WS_CHILD | WS_BORDER | TVS_HASBUTTONS // dwStyle
         , rc->left, rc->top // x, y
         , rc->right - rc->left, rc->bottom - rc->top // width, height
         , parent // hwndParent
@@ -67,31 +39,29 @@ HWND CreateNavigationTree(HWND parent, HINSTANCE hInstance, RECT *rc)
         , NULL // lpParam
     );
 
-    //InitTreeViewImageLists(parent);
+    InitTreeViewImageLists(hwnd_tree);
     
-    return hwnd;
+    return hwnd_tree;
 }
 
-HTREEITEM InsertNavigationItem(HWND hwnd, SHFILEINFOW *item, HTREEITEM parent, int level)
+HTREEITEM InsertNavigationItem(HWND hwnd_tree, SHFILEINFOW *item, HTREEITEM parent, int level)
 {
     TVITEMW tvi;
     TVINSERTSTRUCTW tvins;
     HTREEITEM hti;
+    ICONINFO iconinfo;
 
     tvi.mask = TVIF_TEXT | TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_PARAM;
 
     tvi.pszText = item->szDisplayName;
     tvi.cchTextMax = sizeof(tvi.pszText)/sizeof(tvi.pszText[0]);
-
-    tvi.iImage = g_nDocument;
-    tvi.iSelectedImage = g_nDocument;
-
+    tvi.iImage = item->iIcon;
+    tvi.iSelectedImage = tvi.iImage;
     tvi.lParam = (LPARAM)level;
     tvins.item = tvi;
     tvins.hParent = parent;
 
-
-    hti = (HTREEITEM)SendMessage(hwnd, TVM_INSERTITEMW, 0, (LPARAM)(LPTVINSERTSTRUCTW)&tvins);
+    hti = (HTREEITEM)SendMessage(hwnd_tree, TVM_INSERTITEMW, 0, (LPARAM)(LPTVINSERTSTRUCTW)&tvins);
 
     return hti;
 }
@@ -144,28 +114,25 @@ void FillNavigationRootItems(HWND hwnd_tree_view)
 
     while (S_OK == enum_id_list->Next(1, &item_pidl, NULL))
     {
-        // STRRET strret;
-        // LPWSTR lpwstr;
-        // hr = drives_shell_folder->GetDisplayNameOf(item_pidl, SHGDN_NORMAL, &strret);
-        // if FAILED(hr) { MessageBoxW(NULL, L"drives_shell_folder->GetDisplayNameOf failed", L"Error", MB_OK); return; }
-        // hr = StrRetToStrW(&strret, item_pidl, &lpwstr);
-        // if FAILED(hr) { MessageBoxW(NULL, L"StrRetToStrW failed", L"Error", MB_OK); return; }
-        // MessageBoxW(NULL, lpwstr, L"Display Name", MB_OK);
+        RunMainWindowLoopWhileMessagesExist();
 
         abs_pidl = ILCombine(folder_pidl, item_pidl);
         SHGetFileInfoW((LPCWSTR)abs_pidl,
             0 // dwFileAttributes
             ,&shell_file_info
             ,sizeof(SHFILEINFOW)
-            ,SHGFI_PIDL|SHGFI_DISPLAYNAME|SHGFI_ATTRIBUTES|SHGFI_SYSICONINDEX);
+            ,SHGFI_PIDL|SHGFI_DISPLAYNAME|SHGFI_ATTRIBUTES|SHGFI_SYSICONINDEX); // SHGFI_ICON | SHGFI_LARGEICON
 
         InsertNavigationItem(hwnd_tree_view, &shell_file_info, TVI_ROOT, 1);
 
-        //MessageBoxW(NULL, shell_file_info.szDisplayName, L"Succeeded", MB_OK);
         CoTaskMemFree(abs_pidl);
         CoTaskMemFree(item_pidl);
-        //CoTaskMemFree(lpwstr);
     }
+
+    // int x = ImageList_GetImageCount(himagelist);
+    // WCHAR buffer[1024];
+    // swprintf(buffer, L"%d", x);
+    // MessageBoxW(NULL, buffer, L"Image List Count", MB_OK);
 
     desktop_shell_folder->Release();
     drives_shell_folder->Release();
