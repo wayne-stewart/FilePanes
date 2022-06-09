@@ -20,7 +20,7 @@
 
 IExplorerBrowser *_peb1;
 IExplorerBrowser *_peb2;
-HWND hwndNavigationTree;
+HWND hwnd_tree_view;
 
 
 #include "MainWindow.cpp"
@@ -66,7 +66,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             {
                 RECT rc,rc0,rc1,rc2;
                 ComputeLayout(hwnd, &rc0, &rc1, &rc2);
-                SetWindowPos(hwndNavigationTree, NULL, rc0.left, rc0.top, rc0.right - rc0.left, rc0.bottom - rc0.top, NULL);
+                SetWindowPos(hwnd_tree_view, NULL, rc0.left, rc0.top, rc0.right - rc0.left, rc0.bottom - rc0.top, NULL);
                 _peb1->SetRect(NULL, rc1);
                 _peb2->SetRect(NULL, rc2);
             }
@@ -113,11 +113,11 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     LPITEMIDLIST lpiidl;
     HTREEITEM tree_item;
 
-    GetNavigationRootItems();
-    hwndNavigationTree = CreateNavigationTree(hwnd, hInstance, &rc0);
-    tree_item = InsertNavigationItem(hwndNavigationTree, L"TESTA", TVI_ROOT, 1);
-    InsertNavigationItem(hwndNavigationTree, L"TESTB", tree_item, 2);
-    InsertNavigationItem(hwndNavigationTree, L"TESTC", tree_item, 2);
+    hwnd_tree_view = CreateNavigationTree(hwnd, hInstance, &rc0);
+    FillNavigationRootItems(hwnd_tree_view);
+    // tree_item = InsertNavigationItem(hwndNavigationTree, L"TESTA", TVI_ROOT, 1);
+    // InsertNavigationItem(hwndNavigationTree, L"TESTB", tree_item, 2);
+    // InsertNavigationItem(hwndNavigationTree, L"TESTC", tree_item, 2);
 
     _peb1->Initialize(hwnd, &rc1, &fs);
     SHGetDesktopFolder(&pshf);

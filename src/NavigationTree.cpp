@@ -67,12 +67,12 @@ HWND CreateNavigationTree(HWND parent, HINSTANCE hInstance, RECT *rc)
         , NULL // lpParam
     );
 
-    InitTreeViewImageLists(parent);
+    //InitTreeViewImageLists(parent);
     
     return hwnd;
 }
 
-HTREEITEM InsertNavigationItem(HWND hwnd, LPWSTR item, HTREEITEM parent, int level)
+HTREEITEM InsertNavigationItem(HWND hwnd, SHFILEINFOW *item, HTREEITEM parent, int level)
 {
     TVITEMW tvi;
     TVINSERTSTRUCTW tvins;
@@ -80,8 +80,8 @@ HTREEITEM InsertNavigationItem(HWND hwnd, LPWSTR item, HTREEITEM parent, int lev
 
     tvi.mask = TVIF_TEXT | TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_PARAM;
 
-    tvi.pszText = item;
-    tvi.cchTextMax = sizeof(item)/sizeof(item[0]);
+    tvi.pszText = item->szDisplayName;
+    tvi.cchTextMax = sizeof(tvi.pszText)/sizeof(tvi.pszText[0]);
 
     tvi.iImage = g_nDocument;
     tvi.iSelectedImage = g_nDocument;
@@ -123,52 +123,52 @@ bool Test()
     return false;
 }
 
-void GetNavigationRootItems()
+void FillNavigationRootItems(HWND hwnd_tree_view)
 {
     HRESULT hr;
-    LPITEMIDLIST pidl;
-    IShellFolder *shell_folder;
+    LPITEMIDLIST folder_pidl, item_pidl, abs_pidl;
+    IShellFolder *desktop_shell_folder;
+    IShellFolder *drives_shell_folder;
     IEnumIDList *enum_id_list;
-    SHFILEINFOW *shell_file_info;
+    SHFILEINFOW shell_file_info;
 
-    //SHGetSpecialFolderLocation(NULL, CSIDL_DRIVES, &pidl);
-
-    hr = SHGetDesktopFolder(&shell_folder);
+    hr = SHGetDesktopFolder(&desktop_shell_folder);
     if FAILED(hr) { MessageBoxW(NULL, L"SHGetDesktopFolder failed", L"Error", MB_OK); return; }
 
-    hr = shell_folder->EnumObjects(NULL, SHCONTF_FOLDERS, &enum_id_list);
-    if FAILED(hr) { MessageBoxW(NULL, L"shell_folder->EnumObjects failed", L"Error", MB_OK); return; }
+    hr = SHGetSpecialFolderLocation(NULL, CSIDL_DRIVES, &folder_pidl);
 
-    while (S_OK == enum_id_list->Next(1, &pidl, NULL))
+    desktop_shell_folder->BindToObject(folder_pidl, NULL, IID_IShellFolder, (void **)&drives_shell_folder);
+
+    hr = drives_shell_folder->EnumObjects(NULL, SHCONTF_FOLDERS, &enum_id_list);
+    if FAILED(hr) { MessageBoxW(NULL, L"desktop_shell_folder->EnumObjects failed", L"Error", MB_OK); return; }
+
+    while (S_OK == enum_id_list->Next(1, &item_pidl, NULL))
     {
-        MessageBoxW(NULL, L"enum_id_list->Next succeeded", L"Succeeded", MB_OK);
-        
-        SHGetFileInfoW((LPCWSTR)pidl,
+        // STRRET strret;
+        // LPWSTR lpwstr;
+        // hr = drives_shell_folder->GetDisplayNameOf(item_pidl, SHGDN_NORMAL, &strret);
+        // if FAILED(hr) { MessageBoxW(NULL, L"drives_shell_folder->GetDisplayNameOf failed", L"Error", MB_OK); return; }
+        // hr = StrRetToStrW(&strret, item_pidl, &lpwstr);
+        // if FAILED(hr) { MessageBoxW(NULL, L"StrRetToStrW failed", L"Error", MB_OK); return; }
+        // MessageBoxW(NULL, lpwstr, L"Display Name", MB_OK);
+
+        abs_pidl = ILCombine(folder_pidl, item_pidl);
+        SHGetFileInfoW((LPCWSTR)abs_pidl,
             0 // dwFileAttributes
-            ,shell_file_info
+            ,&shell_file_info
             ,sizeof(SHFILEINFOW)
             ,SHGFI_PIDL|SHGFI_DISPLAYNAME|SHGFI_ATTRIBUTES|SHGFI_SYSICONINDEX);
-        MessageBoxW(NULL, L"SHGetFileInfoW", L"Succeeded", MB_OK);
 
-        MessageBoxW(NULL, shell_file_info->szDisplayName, L"Succeeded", MB_OK);
+        InsertNavigationItem(hwnd_tree_view, &shell_file_info, TVI_ROOT, 1);
+
+        //MessageBoxW(NULL, shell_file_info.szDisplayName, L"Succeeded", MB_OK);
+        CoTaskMemFree(abs_pidl);
+        CoTaskMemFree(item_pidl);
+        //CoTaskMemFree(lpwstr);
     }
 
-    //int sz = sizeof(lpiidl)/sizeof(lpiidl[0]);
-
-    // WCHAR buf1[1024];
-    // WCHAR buf2[1024];
-    //swprintf(buffer, L"cb: %d abID: %d", pidl->mkid.cb, pidl->mkid.abID);
-    //MessageBoxW(NULL, buffer, L"Alert", MB_OK);
-
-    // while(pidl->mkid.cb > 0)
-    // {
-    //     hr = SHGetPathFromIDListW(pidl, buf1);
-    //     swprintf(buf2, L"cb: %d abID: %p, %s", pidl->mkid.cb, pidl->mkid.abID, buf1);
-    //     MessageBoxW(NULL, buf2, L"Alert", MB_OK);
-    //     pidl+=pidl->mkid.cb;
-
-        
-    // }
-
-
+    desktop_shell_folder->Release();
+    drives_shell_folder->Release();
+    enum_id_list->Release();
+    CoTaskMemFree(folder_pidl);
 }
