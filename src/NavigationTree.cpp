@@ -13,14 +13,6 @@
 int g_nOpen, g_nClosed, g_nDocument;
 HIMAGELIST himagelist;
 
-void InitTreeViewImageLists(HWND hwnd) 
-{ 
-    SHGetImageList(SHIL_SMALL, IID_IImageList, (void **)&himagelist);
-
-    // Associate the image list with the tree-view control. 
-    TreeView_SetImageList(hwnd, himagelist, TVSIL_NORMAL); 
-}
-
 HWND CreateNavigationTree(HWND parent, HINSTANCE hInstance, RECT *rc)
 {
     RECT rcClient;
@@ -30,7 +22,7 @@ HWND CreateNavigationTree(HWND parent, HINSTANCE hInstance, RECT *rc)
         NULL // dwExStyle
         , L"SysTreeView32" // lpClassName
         , L"Navigation Tree" //lpWindowName
-        ,WS_VISIBLE | WS_CHILD | WS_BORDER | TVS_HASBUTTONS // dwStyle
+        ,WS_VISIBLE | WS_CHILD | WS_BORDER | TVS_HASBUTTONS | TVS_FULLROWSELECT //| TVS_HASLINES | TVS_LINESATROOT// dwStyle
         , rc->left, rc->top // x, y
         , rc->right - rc->left, rc->bottom - rc->top // width, height
         , parent // hwndParent
@@ -39,7 +31,21 @@ HWND CreateNavigationTree(HWND parent, HINSTANCE hInstance, RECT *rc)
         , NULL // lpParam
     );
 
-    InitTreeViewImageLists(hwnd_tree);
+    // Create and Associate the image list with the tree-view control. 
+    SHGetImageList(SHIL_SMALL, IID_IImageList, (void **)&himagelist);
+    TreeView_SetImageList(hwnd_tree, himagelist, TVSIL_NORMAL); 
+    //TreeView_SetImageList(hwnd_tree, himagelist, TVSIL_STATE);
+
+    // indent by 10 pixels
+    TreeView_SetIndent(hwnd_tree, 10);
+
+    // set top and bottom padding to 3px by adding 6 to height
+    int item_height = TreeView_GetItemHeight(hwnd_tree);
+    item_height += 6;
+    TreeView_SetItemHeight(hwnd_tree, item_height);
+
+    //TreeView_setstat
+    //TreeView_SetLineColor(hwnd_tree, 0x00FFFFFF);
     
     return hwnd_tree;
 }
@@ -51,17 +57,22 @@ HTREEITEM InsertNavigationItem(HWND hwnd_tree, SHFILEINFOW *item, HTREEITEM pare
     HTREEITEM hti;
     ICONINFO iconinfo;
 
-    tvi.mask = TVIF_TEXT | TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_PARAM;
+    tvi.mask = TVIF_TEXT | TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_PARAM | TVIF_CHILDREN;
 
     tvi.pszText = item->szDisplayName;
     tvi.cchTextMax = sizeof(tvi.pszText)/sizeof(tvi.pszText[0]);
     tvi.iImage = item->iIcon;
     tvi.iSelectedImage = tvi.iImage;
     tvi.lParam = (LPARAM)level;
+    tvi.cChildren = 1;
+    //tvi.state = 0;
     tvins.item = tvi;
     tvins.hParent = parent;
 
     hti = (HTREEITEM)SendMessage(hwnd_tree, TVM_INSERTITEMW, 0, (LPARAM)(LPTVINSERTSTRUCTW)&tvins);
+
+    //SendDlgItemMessageW()
+
 
     return hti;
 }
@@ -128,11 +139,6 @@ void FillNavigationRootItems(HWND hwnd_tree_view)
         CoTaskMemFree(abs_pidl);
         CoTaskMemFree(item_pidl);
     }
-
-    // int x = ImageList_GetImageCount(himagelist);
-    // WCHAR buffer[1024];
-    // swprintf(buffer, L"%d", x);
-    // MessageBoxW(NULL, buffer, L"Image List Count", MB_OK);
 
     desktop_shell_folder->Release();
     drives_shell_folder->Release();

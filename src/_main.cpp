@@ -7,6 +7,8 @@
 #include <propvarutil.h>
 #include <strsafe.h>
 #include <objbase.h>
+#include <Gdiplus.h>
+#include <gdiplusinit.h>
 
 #pragma comment(lib, "user32")
 #pragma comment(lib, "ole32")
@@ -15,6 +17,7 @@
 #pragma comment(lib, "propsys")
 #pragma comment(lib, "shell32")
 #pragma comment(lib, "Gdi32")
+#pragma comment(lib, "Gdiplus")
 
 #pragma comment(linker,"/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 
@@ -54,6 +57,22 @@ void ComputeLayout(HWND hwnd, RECT *rc0, RECT *rc1, RECT *rc2)
     rc2->right = rc2->left + w;
 }
 
+void Alert(LPCWSTR format, va_list args)
+{
+    WCHAR buffer[1024];
+    swprintf(buffer, format, args);
+    MessageBoxW(NULL, buffer, L"Alert", MB_OK | MB_ICONEXCLAMATION);
+}
+
+void OnPaintTreeViewItem(HDC hdc, RECT rc)
+{
+    Gdiplus::Graphics g(hdc);
+    //Gdiplus::Pen pen(Gdiplus::Color(255,0,0,255));
+    Gdiplus::SolidBrush brush(Gdiplus::Color(255,255,0,0));
+    //g.FillRectangle(&brush, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top);
+    g.FillEllipse(&brush, rc.left, rc.top, rc.bottom - rc.top, rc.bottom - rc.top);
+}
+
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     switch(msg)
@@ -72,6 +91,43 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             }
 
             break;
+        case WM_NOTIFY:
+            LPNMHDR nmhdr = (LPNMHDR)lParam;
+            if (nmhdr->hwndFrom == hwnd_tree_view)
+            {
+                switch (nmhdr->code)
+                {
+                    case NM_CLICK:
+                        //MessageBoxW(NULL, L"CLICKED", L"About", MB_OK);
+                        break;
+                    case NM_CUSTOMDRAW:
+                        LPNMTVCUSTOMDRAW pnmtvcd = (LPNMTVCUSTOMDRAW)lParam;
+                        switch (pnmtvcd->nmcd.dwDrawStage)
+                        {
+                            // start of the paint cycle
+                            case CDDS_PREPAINT:
+                                // tell the tree view control I want to custom paint items.
+                                return CDRF_NOTIFYITEMDRAW;
+                                break;
+                            
+                            // before tree view items are painted to customize default painting
+                            // return CDRF_NOTIFYPOSTPAINT to get the message when default painting is done.
+                            case CDDS_ITEMPREPAINT:
+                                //pnmtvcd->clrTextBk = 0x0000FF00;
+                                //OnPaintTreeViewItem(pnmtvcd->nmcd.hdc, pnmtvcd->nmcd.rc);
+                                //return CDRF_SKIPDEFAULT;
+                                return CDRF_NOTIFYPOSTPAINT;
+                                break;
+
+                            // tree view item default painting complete, draw addition stuff on top.
+                            case CDDS_ITEMPOSTPAINT:
+                                OnPaintTreeViewItem(pnmtvcd->nmcd.hdc, pnmtvcd->nmcd.rc);
+                                break;
+                        }
+                        break;
+                }
+            }
+            break;
     }
 
     return DefWindowProcW(hwnd, msg, wParam, lParam);
@@ -82,6 +138,11 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     HRESULT hr;
     HWND hwnd;
     ExplorerBrowserCOM service;
+    Gdiplus::GdiplusStartupInput gdiplusStartupInput;
+    ULONG_PTR gdiplusToken;
+   
+    // Initialize GDI+.
+    Gdiplus::GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
 
     hwnd = CreateMainWindow(hInstance);
 
@@ -115,9 +176,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
     hwnd_tree_view = CreateNavigationTree(hwnd, hInstance, &rc0);
     FillNavigationRootItems(hwnd_tree_view);
-    // tree_item = InsertNavigationItem(hwndNavigationTree, L"TESTA", TVI_ROOT, 1);
-    // InsertNavigationItem(hwndNavigationTree, L"TESTB", tree_item, 2);
-    // InsertNavigationItem(hwndNavigationTree, L"TESTC", tree_item, 2);
 
     _peb1->Initialize(hwnd, &rc1, &fs);
     SHGetDesktopFolder(&pshf);
@@ -125,14 +183,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     pshf->Release();
     
     _peb2->Initialize(hwnd, &rc2, &fs);
-    //SHGetDesktopFolder(&pshf);
-    //SHGetSpecialFolderLocation(hwnd, CSIDL_MYDOCUMENTS, &lpiidl);
     SHGetSpecialFolderLocation(hwnd, CSIDL_DRIVES, &lpiidl);
-    // int sz = sizeof(lpiidl)/sizeof(lpiidl[0]);
-    // WCHAR buffer[1024];
-    // swprintf(buffer, L"item count: %d", sz);
-    // MessageBoxW(hwnd, buffer, L"Alert", MB_OK);
-    
     _peb2->BrowseToIDList(lpiidl, NULL);
     CoTaskMemFree(lpiidl);
 
@@ -146,6 +197,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
     OleUninitialize();
     CoUninitialize();
+    Gdiplus::GdiplusShutdown(gdiplusToken);
+
 
     return 0;
 }
