@@ -72,12 +72,12 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             }
 
             break;
-        case WM_NOTIFY:
+        case WM_NOTIFY: {
             LPNMHDR nmhdr = (LPNMHDR)lParam;
             if (nmhdr->hwndFrom == nav_tree.hwnd)
             {
                 return NavigationTree_OnNotify(&nav_tree, nmhdr, wParam);
-            }
+            }}
             break;
     }
 

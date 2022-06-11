@@ -24,6 +24,7 @@ typedef struct
     HIMAGELIST image_list;
     HFONT font;
 } NavigationTree;
+HWND _parent;
 
 void NavigationTree_OnItemPaint(NavigationTree *tree, LPNMTVCUSTOMDRAW nmtvcd);
 LRESULT NavigationTree_OnNotify(NavigationTree *tree, LPNMHDR nmhdr, WPARAM wParam);
@@ -55,12 +56,14 @@ void Translate(PointF *points, int count, float x, float y)
     }
 }
 
+
+
 LRESULT NavigationTree_OnNotify(NavigationTree *tree, LPNMHDR nmhdr, WPARAM wParam)
 {
     switch (nmhdr->code)
     {
         case NM_CLICK:
-            //MessageBoxW(NULL, L"CLICKED", L"About", MB_OK);
+            //Alert(L"%d", nmhdr)
             break;
         case NM_CUSTOMDRAW:
             LPNMTVCUSTOMDRAW pnmtvcd = (LPNMTVCUSTOMDRAW)nmhdr;
@@ -123,19 +126,47 @@ void NavigationTree_OnItemPaint(NavigationTree *tree, LPNMTVCUSTOMDRAW nmtvcd)
 
     HTREEITEM hit_test = (HTREEITEM)SendMessage(tree->hwnd, TVM_HITTEST, 0, 0);
 
-    //Alert(L"%d %d", rc.top, rc.bottom);
+    //Alert(L"%d %d", item.state, item.stateMask);
 
     PointF local_points[6];
     memcpy(local_points, points, sizeof(points));
     Translate(local_points, ARRAYSIZE(local_points), rc.left, rc.top);
 
-    g.FillRectangle(&bk_highlight_brush, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top);
+    if (item.state & TVIS_SELECTED)
+        g.FillRectangle(&bk_selected_brush, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top);
+    else
+        g.FillRectangle(&bk_highlight_brush, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top);
+
     g.FillPolygon(&arrow_brush, local_points, ARRAYSIZE(local_points));
     g.DrawString((LPCWSTR)item.pszText, wcslen((LPCWSTR)item.pszText), &font, text_point, &arrow_brush);
 }
 
+
+LRESULT NavigationTree_SubClassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+{
+    switch(msg)
+    {
+        // case WM_NOTIFY: {
+        //     LPNMHDR nmhdr = (LPNMHDR)lParam;
+        //     if (nmhdr->hwndFrom == nav_tree.hwnd)
+        //     {
+        //         return NavigationTree_OnNotify(&nav_tree, nmhdr, wParam);
+        //     }
+        // } break;
+        case WM_MOUSEMOVE: {
+            POINTS pts = MAKEPOINTS(lParam);
+            WCHAR buffer[1024] = {};
+            wsprintfW(buffer, L"%d, %d", pts.x, pts.y);
+            SendMessageW(_parent, WM_SETTEXT, 0, LPARAM(buffer));
+        } break;
+    }
+    return DefSubclassProc(hwnd, msg, wParam, lParam);
+}
+
+
 void CreateNavigationTree(NavigationTree *tree, HWND parent, HINSTANCE hInstance, RECT *rc)
 {
+    _parent = parent;
     RECT rcClient;
 
     GetClientRect(parent, &rcClient);
@@ -151,6 +182,8 @@ void CreateNavigationTree(NavigationTree *tree, HWND parent, HINSTANCE hInstance
         , hInstance // hInstance
         , NULL // lpParam
     );
+
+    SetWindowSubclass(hwnd_tree, NavigationTree_SubClassProc, 1, NULL);
 
     tree->font = (HFONT)SendMessage(tree->hwnd, WM_GETFONT, NULL, NULL);
     
