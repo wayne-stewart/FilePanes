@@ -95,10 +95,6 @@ LRESULT NavigationTree_OnNotify(NavigationTree *tree, LPNMHDR nmhdr, WPARAM wPar
                 // before tree view items are painted to customize default painting
                 // return CDRF_NOTIFYPOSTPAINT to get the message when default painting is done.
                 case CDDS_ITEMPREPAINT:
-                    //pnmtvcd->clrTextBk = 0x0000FF00;
-                    //OnPaintTreeViewItem(pnmtvcd->nmcd.hdc, pnmtvcd->nmcd.rc);
-                    //return CDRF_DODEFAULT;
-                    //return CDRF_NOTIFYPOSTPAINT;
                     NavigationTree_OnItemPaint(tree, pnmtvcd);
                     return CDRF_SKIPDEFAULT;
                     break;
@@ -121,25 +117,11 @@ void NavigationTree_OnItemPaint(NavigationTree *tree, LPNMTVCUSTOMDRAW nmtvcd)
     HDC hdc = nmtvcd->nmcd.hdc;
     Graphics g(hdc);
     Font font(hdc, tree->font);
-    //Gdiplus::Pen pen(Gdiplus::Color(255,0,0,255));
     SolidBrush arrow_brush(Color(50,50,50));
     SolidBrush bk_highlight_brush(Color(229, 243, 255));
     SolidBrush bk_selected_brush(Color(205, 232, 255));
     SolidBrush bk_inactive_select_brush(Color(217,217,217));
     SolidBrush text_brush(Color(0,0,0));
-
-    COLORREF color_arrow = RGB(50,50,50);
-    COLORREF color_bk_highlight = RGB(229, 243, 255);
-    COLORREF color_bk_selecteded = RGB(205, 232, 255);
-    COLORREF color_bk_inactive_select = RGB(217,217,217);
-    COLORREF color_text = RGB(0,0,0);
-
-    HBRUSH brush_arrow = CreateSolidBrush(color_arrow);
-    HBRUSH brush_bk_highlight = CreateSolidBrush(color_bk_highlight);
-    HBRUSH brush_bk_selected = CreateSolidBrush(color_bk_selecteded);
-    HBRUSH brush_bk_inactive_selected = CreateSolidBrush(color_bk_inactive_select);
-    HBRUSH brush_text = CreateSolidBrush(color_text);
-
 
     HTREEITEM hitem = (HTREEITEM)nmtvcd->nmcd.dwItemSpec;
 
@@ -149,18 +131,16 @@ void NavigationTree_OnItemPaint(NavigationTree *tree, LPNMTVCUSTOMDRAW nmtvcd)
     item.mask = TVIF_TEXT | TVIF_STATE | TVIF_IMAGE;
     item.pszText = buffer;
     item.cchTextMax = ARRAYSIZE(buffer);
-    //TreeView_GetItem(tree->hwnd, &item);
     SendMessage(tree->hwnd, TVM_GETITEMW, 0, LPARAM(&item));
 
     //Alert(L"%d %d", item.state, item.stateMask);
 
     if (item.state & TVIS_SELECTED) {
-        FillRect(hdc, &rc, brush_bk_selected);
-        SetBkColor(hdc, color_bk_selecteded);
+        g.FillRectangle(&bk_selected_brush, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top);
     }
-        //g.FillRectangle(&bk_selected_brush, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top);
-    // else
-    //     g.FillRectangle(&bk_highlight_brush, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top);
+    else {
+        g.FillRectangle(&bk_highlight_brush, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top);
+    }  
 
     PointF local_points[6];
     memcpy(local_points, points, sizeof(points));
@@ -170,9 +150,8 @@ void NavigationTree_OnItemPaint(NavigationTree *tree, LPNMTVCUSTOMDRAW nmtvcd)
 
     int cx,cy;
     ImageList_GetIconSize(tree->image_list, &cx, &cy);
-    ImageList_Draw(tree->image_list, item.iImage, hdc, rc.left+18, rc.top + (((rc.bottom - rc.top) - cy)/2), ILD_NORMAL);
-    //rc.left += 50;
-    //DrawTextW(hdc, item.pszText, wcslen((LPCWSTR)item.pszText), &rc, DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+    ImageList_Draw(tree->image_list, item.iImage, hdc, rc.left+18, rc.top + (((rc.bottom - rc.top) - cy)/2), ILD_TRANSPARENT);
+
     RectF layout_rect(0.0, 0.0, 100.0, 50.0);
     RectF bounding_box;
     g.MeasureString(L"Wg", 2, &font, layout_rect, &bounding_box);
