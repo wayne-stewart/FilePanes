@@ -26,12 +26,6 @@ typedef struct
     HFONT font;
 } NavigationTree;
 
-HWND _parent;
-UINT _flags[1024];
-const int DELETED = 1;
-const int SELECTED = 1 << 1;
-const int HIGHLIGHTED = 1 << 1;
-
 void NavigationTree_OnItemPaint(NavigationTree *tree, LPNMTVCUSTOMDRAW nmtvcd);
 LRESULT NavigationTree_OnNotify(NavigationTree *tree, LPNMHDR nmhdr, WPARAM wParam);
 
@@ -186,12 +180,12 @@ LRESULT NavigationTree_SubClassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
             if (NavigationTree_HitTest(hwnd, pts, &item, item_buffer, ARRAYSIZE(item_buffer)))
             {
                 wsprintfW(buffer, L"%d, %d, %s", pts.x, pts.y, item.pszText);
-                SendMessageW(_parent, WM_SETTEXT, 0, LPARAM(buffer));
+                SendMessageW(GetParent(hwnd), WM_SETTEXT, 0, LPARAM(buffer));
             }
             else
             {
                 wsprintfW(buffer, L"%d, %d", pts.x, pts.y);
-                SendMessageW(_parent, WM_SETTEXT, 0, LPARAM(buffer));
+                SendMessageW(GetParent(hwnd), WM_SETTEXT, 0, LPARAM(buffer));
             }
         } break;
         // case WM_LBUTTONDOWN: {
@@ -212,10 +206,8 @@ LRESULT NavigationTree_SubClassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
     return DefSubclassProc(hwnd, msg, wParam, lParam);
 }
 
-
 void CreateNavigationTree(NavigationTree *tree, HWND parent, HINSTANCE hInstance, RECT *rc)
 {
-    _parent = parent;
     RECT rcClient;
 
     GetClientRect(parent, &rcClient);
@@ -319,4 +311,11 @@ void FillNavigationRootItems(NavigationTree *tree)
     drives_shell_folder->Release();
     enum_id_list->Release();
     CoTaskMemFree(folder_pidl);
+}
+
+void ExpandNavigationTreeItem(NavigationTree *tree, HTREEITEM parent)
+{
+    HRESULT hr;
+
+
 }
