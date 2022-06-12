@@ -97,45 +97,6 @@ LRESULT NavigationTree_OnCustomDraw(NavigationTree *tree, LPNMTVCUSTOMDRAW pnmtv
     }
 }
 
-// LRESULT NavigationTree_OnNotify(NavigationTree *tree, LPNMHDR nmhdr, WPARAM wParam)
-// {
-//     switch (nmhdr->code)
-//     {
-//         case NM_CLICK:
-//             //Alert(L"%d", nmhdr)
-//             break;
-//         case NM_CUSTOMDRAW: {
-//             LPNMTVCUSTOMDRAW pnmtvcd = (LPNMTVCUSTOMDRAW)nmhdr;
-//             switch (pnmtvcd->nmcd.dwDrawStage)
-//             {
-//                 // start of the paint cycle
-//                 case CDDS_PREPAINT:
-//                     // tell the tree view control I want to custom paint items.
-//                     return CDRF_NOTIFYITEMDRAW;
-//                     break;
-                
-//                 // before tree view items are painted to customize default painting
-//                 // return CDRF_NOTIFYPOSTPAINT to get the message when default painting is done.
-//                 case CDDS_ITEMPREPAINT:
-//                     NavigationTree_OnItemPaint(tree, pnmtvcd);
-//                     return CDRF_SKIPDEFAULT;
-//                     break;
-
-//                 // tree view item default painting complete, draw addition stuff on top.
-//                 case CDDS_ITEMPOSTPAINT:
-//                     //OnPaintTreeViewItem(pnmtvcd->nmcd.hdc, pnmtvcd->nmcd.rc);
-//                     break;
-//             }
-//         } break;
-//         case TVN_SELCHANGEDW: {
-//             LPNMTREEVIEWW pnmtv = (LPNMTREEVIEWW)nmhdr;
-//             HTREEITEM item = pnmtv->itemNew.hItem;
-//             Alert(L"SEL CHANGED: %s", pnmtv->itemNew.lParam);
-//         } break;
-//     }
-//     return NULL;
-// }
-
 void NavigationTree_OnItemPaint(NavigationTree *tree, LPNMTVCUSTOMDRAW nmtvcd)
 {
     RECT rc = nmtvcd->nmcd.rc;
@@ -144,7 +105,10 @@ void NavigationTree_OnItemPaint(NavigationTree *tree, LPNMTVCUSTOMDRAW nmtvcd)
 
     HDC hdc = nmtvcd->nmcd.hdc;
     Graphics g(hdc);
-    Font font(hdc, tree->font);
+    Font hdcfont(hdc);
+    Gdiplus::FontFamily family;
+    hdcfont.GetFamily(&family);
+    Font font(&family, hdcfont.GetSize(), 0, hdcfont.GetUnit());
     SolidBrush arrow_brush(Color(50,50,50));
     SolidBrush bk_highlight_brush(Color(229, 243, 255));
     SolidBrush bk_selected_brush(Color(205, 232, 255));
@@ -167,6 +131,9 @@ void NavigationTree_OnItemPaint(NavigationTree *tree, LPNMTVCUSTOMDRAW nmtvcd)
     if (item.state & TVIS_SELECTED) {
         g.FillRectangle(&bk_selected_brush, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top);
     }
+    else if (hdcfont.GetStyle() & Gdiplus::FontStyleUnderline) {
+        g.FillRectangle(&bk_highlight_brush, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top);
+    }
     else {
         g.FillRectangle(&bk_white_brush, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top);
     }  
@@ -186,7 +153,7 @@ void NavigationTree_OnItemPaint(NavigationTree *tree, LPNMTVCUSTOMDRAW nmtvcd)
     g.MeasureString(L"Wg", 2, &font, layout_rect, &bounding_box);
     PointF text_point;
     text_point.X = rc.left + 35;
-    text_point.Y = rc.top + ((((rc.bottom - rc.top) - (bounding_box.Height)))/2);
+    text_point.Y = rc.top + ((((rc.bottom - rc.top) - (bounding_box.Height)))/2); 
     g.DrawString((LPCWSTR)item.pszText, wcslen((LPCWSTR)item.pszText), &font, text_point, &text_brush);
 }
 
@@ -256,7 +223,7 @@ void CreateNavigationTree(NavigationTree *tree, HWND parent, HINSTANCE hInstance
         NULL // dwExStyle
         , L"SysTreeView32" // lpClassName
         , L"Navigation Tree" //lpWindowName
-        ,WS_VISIBLE | WS_CHILD | WS_BORDER | TVS_FULLROWSELECT | TVS_DISABLEDRAGDROP // | TVS_TRACKSELECT //| TVS_HASLINES | TVS_LINESATROOT// dwStyle
+        ,WS_VISIBLE | WS_CHILD | WS_BORDER | TVS_FULLROWSELECT | TVS_DISABLEDRAGDROP | TVS_TRACKSELECT //| TVS_HASLINES | TVS_LINESATROOT// dwStyle
         , rc->left, rc->top // x, y
         , rc->right - rc->left, rc->bottom - rc->top // width, height
         , parent // hwndParent
