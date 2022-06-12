@@ -29,3 +29,30 @@ bool GetItemIdListFromPath(LPCWSTR path, LPITEMIDLIST *items)
 // {
 //     Shget
 // }
+
+bool ShellUtil_Test()
+{
+    IKnownFolderManager *manager;
+    HRESULT hr;
+    UINT count;
+    KNOWNFOLDERID *kfid;
+    IKnownFolder *known_folder;
+    IShellItem *shell_item;
+
+    hr = CoCreateInstance(CLSID_KnownFolderManager, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&manager));
+    if FAILED(hr) return false;
+
+    hr = manager->GetFolder(FOLDERID_Downloads, &known_folder);
+    if FAILED(hr) goto CLEANUP;
+
+    hr = known_folder->GetShellItem(NULL, IID_PPV_ARGS(&shell_item));
+    if SUCCEEDED(hr) {
+
+        known_folder->Release();
+    }
+
+    CLEANUP:
+    manager->Release();
+
+    return false;
+}

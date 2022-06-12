@@ -95,7 +95,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     // Initialize GDI+.
     Gdiplus::GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
 
-    Scale(points, ARRAYSIZE(points), 20.0/6.0);
+    Scale(points, ARRAYSIZE(points), 10.0/6.0);
 
     hwnd = CreateMainWindow(hInstance);
 

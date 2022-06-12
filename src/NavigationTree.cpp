@@ -17,6 +17,7 @@ using SolidBrush = Gdiplus::SolidBrush;
 using Color = Gdiplus::Color;
 using PointF = Gdiplus::PointF;
 using Font = Gdiplus::Font;
+using RectF = Gdiplus::RectF;
 
 typedef struct
 {
@@ -24,7 +25,12 @@ typedef struct
     HIMAGELIST image_list;
     HFONT font;
 } NavigationTree;
+
 HWND _parent;
+UINT _flags[1024];
+const int DELETED = 1;
+const int SELECTED = 1 << 1;
+const int HIGHLIGHTED = 1 << 1;
 
 void NavigationTree_OnItemPaint(NavigationTree *tree, LPNMTVCUSTOMDRAW nmtvcd);
 LRESULT NavigationTree_OnNotify(NavigationTree *tree, LPNMHDR nmhdr, WPARAM wParam);
@@ -37,6 +43,17 @@ PointF points[6] = {
     ,{2,3}
     ,{0,1}
 };
+
+float GetHeight(PointF *points, int count)
+{
+    float max = 0;
+    for(int i = 0; i < count; i++) {
+        if (points[i].Y > max) {
+            max = points[i].Y;
+        }
+    }
+    return max;
+}
 
 void Scale(PointF *points, int count, float scale)
 {
@@ -105,13 +122,24 @@ void NavigationTree_OnItemPaint(NavigationTree *tree, LPNMTVCUSTOMDRAW nmtvcd)
     Graphics g(hdc);
     Font font(hdc, tree->font);
     //Gdiplus::Pen pen(Gdiplus::Color(255,0,0,255));
-    SolidBrush arrow_brush(Color(255,255,0,0));
+    SolidBrush arrow_brush(Color(50,50,50));
     SolidBrush bk_highlight_brush(Color(229, 243, 255));
     SolidBrush bk_selected_brush(Color(205, 232, 255));
     SolidBrush bk_inactive_select_brush(Color(217,217,217));
-    PointF text_point;
-    text_point.X = rc.left + 35;
-    text_point.Y = rc.top;
+    SolidBrush text_brush(Color(0,0,0));
+
+    COLORREF color_arrow = RGB(50,50,50);
+    COLORREF color_bk_highlight = RGB(229, 243, 255);
+    COLORREF color_bk_selecteded = RGB(205, 232, 255);
+    COLORREF color_bk_inactive_select = RGB(217,217,217);
+    COLORREF color_text = RGB(0,0,0);
+
+    HBRUSH brush_arrow = CreateSolidBrush(color_arrow);
+    HBRUSH brush_bk_highlight = CreateSolidBrush(color_bk_highlight);
+    HBRUSH brush_bk_selected = CreateSolidBrush(color_bk_selecteded);
+    HBRUSH brush_bk_inactive_selected = CreateSolidBrush(color_bk_inactive_select);
+    HBRUSH brush_text = CreateSolidBrush(color_text);
+
 
     HTREEITEM hitem = (HTREEITEM)nmtvcd->nmcd.dwItemSpec;
 
@@ -121,24 +149,37 @@ void NavigationTree_OnItemPaint(NavigationTree *tree, LPNMTVCUSTOMDRAW nmtvcd)
     item.mask = TVIF_TEXT | TVIF_STATE | TVIF_IMAGE;
     item.pszText = buffer;
     item.cchTextMax = ARRAYSIZE(buffer);
-    TreeView_GetItem(tree->hwnd, &item);
+    //TreeView_GetItem(tree->hwnd, &item);
     SendMessage(tree->hwnd, TVM_GETITEMW, 0, LPARAM(&item));
-
-    HTREEITEM hit_test = (HTREEITEM)SendMessage(tree->hwnd, TVM_HITTEST, 0, 0);
 
     //Alert(L"%d %d", item.state, item.stateMask);
 
+    if (item.state & TVIS_SELECTED) {
+        FillRect(hdc, &rc, brush_bk_selected);
+        SetBkColor(hdc, color_bk_selecteded);
+    }
+        //g.FillRectangle(&bk_selected_brush, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top);
+    // else
+    //     g.FillRectangle(&bk_highlight_brush, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top);
+
     PointF local_points[6];
     memcpy(local_points, points, sizeof(points));
-    Translate(local_points, ARRAYSIZE(local_points), rc.left, rc.top);
-
-    if (item.state & TVIS_SELECTED)
-        g.FillRectangle(&bk_selected_brush, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top);
-    else
-        g.FillRectangle(&bk_highlight_brush, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top);
-
+    int h = GetHeight(local_points, ARRAYSIZE(local_points));
+    Translate(local_points, ARRAYSIZE(local_points), rc.left + 5, rc.top + ((rc.bottom - rc.top) - h)/2);
     g.FillPolygon(&arrow_brush, local_points, ARRAYSIZE(local_points));
-    g.DrawString((LPCWSTR)item.pszText, wcslen((LPCWSTR)item.pszText), &font, text_point, &arrow_brush);
+
+    int cx,cy;
+    ImageList_GetIconSize(tree->image_list, &cx, &cy);
+    ImageList_Draw(tree->image_list, item.iImage, hdc, rc.left+18, rc.top + (((rc.bottom - rc.top) - cy)/2), ILD_NORMAL);
+    //rc.left += 50;
+    //DrawTextW(hdc, item.pszText, wcslen((LPCWSTR)item.pszText), &rc, DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+    RectF layout_rect(0.0, 0.0, 100.0, 50.0);
+    RectF bounding_box;
+    g.MeasureString(L"Wg", 2, &font, layout_rect, &bounding_box);
+    PointF text_point;
+    text_point.X = rc.left + 35;
+    text_point.Y = rc.top + ((((rc.bottom - rc.top) - (bounding_box.Height)))/2);
+    g.DrawString((LPCWSTR)item.pszText, wcslen((LPCWSTR)item.pszText), &font, text_point, &text_brush);
 }
 
 
@@ -159,6 +200,30 @@ LRESULT NavigationTree_SubClassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
             wsprintfW(buffer, L"%d, %d", pts.x, pts.y);
             SendMessageW(_parent, WM_SETTEXT, 0, LPARAM(buffer));
         } break;
+        case WM_LBUTTONDOWN: {
+            POINTS pts = MAKEPOINTS(lParam);
+            TVHITTESTINFO hit_test;
+            POINTSTOPOINT(hit_test.pt, pts);
+            TreeView_HitTest(hwnd, &hit_test);
+            if (hit_test.hItem != NULL)
+            {
+                TVITEMW item;
+                WCHAR buffer[260] = {};
+                item.hItem = hit_test.hItem;
+                item.mask = TVIF_TEXT | TVIF_STATE | TVIF_IMAGE;
+                item.pszText = buffer;
+                item.cchTextMax = ARRAYSIZE(buffer);
+                TreeView_GetItem(hwnd, &item);
+                SendMessageW(hwnd, TVM_GETITEMW, 0, (LPARAM)&item);
+                // WCHAR buffer[1024] = {};
+                // wsprintfW(buffer, L"%s", item.pszText);
+                // SendMessageW(_parent, WM_SETTEXT, 0, LPARAM(item.pszText));
+                Alert(L"State: %d, Image: %d", item.state, item.iImage);
+
+                TreeView_SelectItem(hwnd, hit_test.hItem);
+                //InvalidateRect(hwnd, NULL, 0);
+            }
+        } break;
     }
     return DefSubclassProc(hwnd, msg, wParam, lParam);
 }
@@ -174,7 +239,7 @@ void CreateNavigationTree(NavigationTree *tree, HWND parent, HINSTANCE hInstance
         NULL // dwExStyle
         , L"SysTreeView32" // lpClassName
         , L"Navigation Tree" //lpWindowName
-        ,WS_VISIBLE | WS_CHILD | WS_BORDER | TVS_FULLROWSELECT // | TVS_TRACKSELECT //| TVS_HASLINES | TVS_LINESATROOT// dwStyle
+        ,WS_VISIBLE | WS_CHILD | WS_BORDER | TVS_FULLROWSELECT | TVS_DISABLEDRAGDROP // | TVS_TRACKSELECT //| TVS_HASLINES | TVS_LINESATROOT// dwStyle
         , rc->left, rc->top // x, y
         , rc->right - rc->left, rc->bottom - rc->top // width, height
         , parent // hwndParent
@@ -209,56 +274,31 @@ void CreateNavigationTree(NavigationTree *tree, HWND parent, HINSTANCE hInstance
     tree->hwnd = hwnd_tree;
 }
 
-HTREEITEM InsertNavigationItem(NavigationTree *tree, SHFILEINFOW *item, HTREEITEM parent, int level)
+HTREEITEM InsertNavigationItem(NavigationTree *tree, SHFILEINFOW *item, HTREEITEM parent, HTREEITEM prev, int level, int option)
 {
     TVITEMW tvi;
     TVINSERTSTRUCTW tvins;
     HTREEITEM hti;
     ICONINFO iconinfo;
 
-    tvi.mask = TVIF_TEXT | TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_PARAM | TVIF_CHILDREN;
+    tvi.mask = TVIF_TEXT | TVIF_IMAGE | TVIF_PARAM | TVIF_CHILDREN | TVIF_STATE;
+    //tvi.stateMask = TVIF_S
 
     tvi.pszText = item->szDisplayName;
     tvi.cchTextMax = sizeof(tvi.pszText)/sizeof(tvi.pszText[0]);
     tvi.iImage = item->iIcon;
-    tvi.iSelectedImage = tvi.iImage;
     tvi.lParam = (LPARAM)level;
     tvi.cChildren = 1;
-    //tvi.state = 0;
+    tvi.state = option == 1 ? TVIS_SELECTED : 0;
     tvins.item = tvi;
     tvins.hParent = parent;
+    tvins.hInsertAfter = prev;
 
     hti = (HTREEITEM)SendMessage(tree->hwnd, TVM_INSERTITEMW, 0, (LPARAM)(LPTVINSERTSTRUCTW)&tvins);
 
     return hti;
 }
 
-bool Test()
-{
-    IKnownFolderManager *manager;
-    HRESULT hr;
-    UINT count;
-    KNOWNFOLDERID *kfid;
-    IKnownFolder *known_folder;
-    IShellItem *shell_item;
-
-    hr = CoCreateInstance(CLSID_KnownFolderManager, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&manager));
-    if FAILED(hr) return false;
-
-    hr = manager->GetFolder(FOLDERID_Downloads, &known_folder);
-    if FAILED(hr) goto CLEANUP;
-
-    hr = known_folder->GetShellItem(NULL, IID_PPV_ARGS(&shell_item));
-    if SUCCEEDED(hr) {
-
-        known_folder->Release();
-    }
-
-    CLEANUP:
-    manager->Release();
-
-    return false;
-}
 
 void FillNavigationRootItems(NavigationTree *tree)
 {
@@ -279,6 +319,8 @@ void FillNavigationRootItems(NavigationTree *tree)
     hr = drives_shell_folder->EnumObjects(NULL, SHCONTF_FOLDERS, &enum_id_list);
     if FAILED(hr) { MessageBoxW(NULL, L"desktop_shell_folder->EnumObjects failed", L"Error", MB_OK); return; }
 
+    int option = 0;
+    HTREEITEM prev = NULL;
     while (S_OK == enum_id_list->Next(1, &item_pidl, NULL))
     {
         RunMainWindowLoopWhileMessagesExist();
@@ -290,7 +332,9 @@ void FillNavigationRootItems(NavigationTree *tree)
             ,sizeof(SHFILEINFOW)
             ,SHGFI_PIDL|SHGFI_DISPLAYNAME|SHGFI_ATTRIBUTES|SHGFI_SYSICONINDEX|SHGFI_ICON); //  | SHGFI_LARGEICON
 
-        InsertNavigationItem(tree, &shell_file_info, TVI_ROOT, 1);
+        if (option == 0) option = 1;
+        else if (option == 1) option = 0;
+        prev = InsertNavigationItem(tree, &shell_file_info, TVI_ROOT, prev, 0, option);
 
         CoTaskMemFree(abs_pidl);
         CoTaskMemFree(item_pidl);
