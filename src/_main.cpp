@@ -56,6 +56,7 @@ void ComputeLayout(HWND hwnd, RECT *rc0, RECT *rc1, RECT *rc2)
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
+
     switch(msg)
     {
         case WM_DESTROY:
@@ -76,11 +77,31 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             LPNMHDR nmhdr = (LPNMHDR)lParam;
             if (nmhdr->hwndFrom == nav_tree.hwnd)
             {
-                return NavigationTree_OnNotify(&nav_tree, nmhdr, wParam);
+                switch (nmhdr->code)
+                {
+                    case NM_CLICK:{
+
+                    } break;
+                    case NM_CUSTOMDRAW: {
+                        return NavigationTree_OnCustomDraw(&nav_tree, (LPNMTVCUSTOMDRAW)nmhdr);
+                    } break;
+                    case TVN_SELCHANGEDW: {
+                        LPNMTREEVIEWW pnmtv = (LPNMTREEVIEWW)nmhdr;
+                        //Alert(L"SEL CHANGED: %s", pnmtv->itemNew.lParam);
+                        LPITEMIDLIST pidl;
+                        SHParseDisplayName((PCWSTR)pnmtv->itemNew.lParam, NULL, &pidl, NULL, NULL);
+                        _peb1->BrowseToIDList(pidl, SBSP_ABSOLUTE);
+                        CoTaskMemFree(pidl);
+                    } break;
+                }
+                // LRESULT ret = NavigationTree_OnNotify(&nav_tree, nmhdr, wParam);
+                // if (ret == NULL) goto WNDPROC_DEFAULT;
+                // return ret;
             }}
             break;
     }
 
+    WNDPROC_DEFAULT:
     return DefWindowProcW(hwnd, msg, wParam, lParam);
 }
 

@@ -73,40 +73,68 @@ void Translate(PointF *points, int count, float x, float y)
     }
 }
 
-
-
-LRESULT NavigationTree_OnNotify(NavigationTree *tree, LPNMHDR nmhdr, WPARAM wParam)
+LRESULT NavigationTree_OnCustomDraw(NavigationTree *tree, LPNMTVCUSTOMDRAW pnmtvcd)
 {
-    switch (nmhdr->code)
+    switch (pnmtvcd->nmcd.dwDrawStage)
     {
-        case NM_CLICK:
-            //Alert(L"%d", nmhdr)
+        // start of the paint cycle
+        case CDDS_PREPAINT:
+            // tell the tree view control I want to custom paint items.
+            return CDRF_NOTIFYITEMDRAW;
             break;
-        case NM_CUSTOMDRAW:
-            LPNMTVCUSTOMDRAW pnmtvcd = (LPNMTVCUSTOMDRAW)nmhdr;
-            switch (pnmtvcd->nmcd.dwDrawStage)
-            {
-                // start of the paint cycle
-                case CDDS_PREPAINT:
-                    // tell the tree view control I want to custom paint items.
-                    return CDRF_NOTIFYITEMDRAW;
-                    break;
-                
-                // before tree view items are painted to customize default painting
-                // return CDRF_NOTIFYPOSTPAINT to get the message when default painting is done.
-                case CDDS_ITEMPREPAINT:
-                    NavigationTree_OnItemPaint(tree, pnmtvcd);
-                    return CDRF_SKIPDEFAULT;
-                    break;
+        
+        // before tree view items are painted to customize default painting
+        // return CDRF_NOTIFYPOSTPAINT to get the message when default painting is done.
+        case CDDS_ITEMPREPAINT:
+            NavigationTree_OnItemPaint(tree, pnmtvcd);
+            return CDRF_SKIPDEFAULT;
+            break;
 
-                // tree view item default painting complete, draw addition stuff on top.
-                case CDDS_ITEMPOSTPAINT:
-                    //OnPaintTreeViewItem(pnmtvcd->nmcd.hdc, pnmtvcd->nmcd.rc);
-                    break;
-            }
+        // tree view item default painting complete, draw addition stuff on top.
+        case CDDS_ITEMPOSTPAINT:
+            //OnPaintTreeViewItem(pnmtvcd->nmcd.hdc, pnmtvcd->nmcd.rc);
             break;
     }
 }
+
+// LRESULT NavigationTree_OnNotify(NavigationTree *tree, LPNMHDR nmhdr, WPARAM wParam)
+// {
+//     switch (nmhdr->code)
+//     {
+//         case NM_CLICK:
+//             //Alert(L"%d", nmhdr)
+//             break;
+//         case NM_CUSTOMDRAW: {
+//             LPNMTVCUSTOMDRAW pnmtvcd = (LPNMTVCUSTOMDRAW)nmhdr;
+//             switch (pnmtvcd->nmcd.dwDrawStage)
+//             {
+//                 // start of the paint cycle
+//                 case CDDS_PREPAINT:
+//                     // tell the tree view control I want to custom paint items.
+//                     return CDRF_NOTIFYITEMDRAW;
+//                     break;
+                
+//                 // before tree view items are painted to customize default painting
+//                 // return CDRF_NOTIFYPOSTPAINT to get the message when default painting is done.
+//                 case CDDS_ITEMPREPAINT:
+//                     NavigationTree_OnItemPaint(tree, pnmtvcd);
+//                     return CDRF_SKIPDEFAULT;
+//                     break;
+
+//                 // tree view item default painting complete, draw addition stuff on top.
+//                 case CDDS_ITEMPOSTPAINT:
+//                     //OnPaintTreeViewItem(pnmtvcd->nmcd.hdc, pnmtvcd->nmcd.rc);
+//                     break;
+//             }
+//         } break;
+//         case TVN_SELCHANGEDW: {
+//             LPNMTREEVIEWW pnmtv = (LPNMTREEVIEWW)nmhdr;
+//             HTREEITEM item = pnmtv->itemNew.hItem;
+//             Alert(L"SEL CHANGED: %s", pnmtv->itemNew.lParam);
+//         } break;
+//     }
+//     return NULL;
+// }
 
 void NavigationTree_OnItemPaint(NavigationTree *tree, LPNMTVCUSTOMDRAW nmtvcd)
 {
@@ -121,6 +149,7 @@ void NavigationTree_OnItemPaint(NavigationTree *tree, LPNMTVCUSTOMDRAW nmtvcd)
     SolidBrush bk_highlight_brush(Color(229, 243, 255));
     SolidBrush bk_selected_brush(Color(205, 232, 255));
     SolidBrush bk_inactive_select_brush(Color(217,217,217));
+    SolidBrush bk_white_brush(Color(255, 255, 255));
     SolidBrush text_brush(Color(0,0,0));
 
     HTREEITEM hitem = (HTREEITEM)nmtvcd->nmcd.dwItemSpec;
@@ -139,7 +168,7 @@ void NavigationTree_OnItemPaint(NavigationTree *tree, LPNMTVCUSTOMDRAW nmtvcd)
         g.FillRectangle(&bk_selected_brush, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top);
     }
     else {
-        g.FillRectangle(&bk_highlight_brush, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top);
+        g.FillRectangle(&bk_white_brush, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top);
     }  
 
     PointF local_points[6];
@@ -161,48 +190,57 @@ void NavigationTree_OnItemPaint(NavigationTree *tree, LPNMTVCUSTOMDRAW nmtvcd)
     g.DrawString((LPCWSTR)item.pszText, wcslen((LPCWSTR)item.pszText), &font, text_point, &text_brush);
 }
 
+BOOL NavigationTree_HitTest(HWND hwnd, POINTS pts, TVITEMW *item, LPWSTR buffer, int buffer_size)
+{
+    TVHITTESTINFO hit_test;
+    POINTSTOPOINT(hit_test.pt, pts);
+    TreeView_HitTest(hwnd, &hit_test);
+    if (hit_test.hItem != NULL)
+    {
+        item->hItem = hit_test.hItem;
+        item->mask = TVIF_TEXT | TVIF_STATE;
+        item->pszText = buffer;
+        item->cchTextMax = buffer_size;
+        SendMessageW(hwnd, TVM_GETITEMW, 0, (LPARAM)item);
+        return TRUE;
+    }
+    return FALSE;
+}
 
 LRESULT NavigationTree_SubClassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
 {
     switch(msg)
     {
-        // case WM_NOTIFY: {
-        //     LPNMHDR nmhdr = (LPNMHDR)lParam;
-        //     if (nmhdr->hwndFrom == nav_tree.hwnd)
-        //     {
-        //         return NavigationTree_OnNotify(&nav_tree, nmhdr, wParam);
-        //     }
-        // } break;
         case WM_MOUSEMOVE: {
             POINTS pts = MAKEPOINTS(lParam);
-            WCHAR buffer[1024] = {};
-            wsprintfW(buffer, L"%d, %d", pts.x, pts.y);
-            SendMessageW(_parent, WM_SETTEXT, 0, LPARAM(buffer));
-        } break;
-        case WM_LBUTTONDOWN: {
-            POINTS pts = MAKEPOINTS(lParam);
-            TVHITTESTINFO hit_test;
-            POINTSTOPOINT(hit_test.pt, pts);
-            TreeView_HitTest(hwnd, &hit_test);
-            if (hit_test.hItem != NULL)
+            TVITEMW item;
+            WCHAR item_buffer[260] = {};
+            WCHAR buffer[128] = {};
+            if (NavigationTree_HitTest(hwnd, pts, &item, item_buffer, ARRAYSIZE(item_buffer)))
             {
-                TVITEMW item;
-                WCHAR buffer[260] = {};
-                item.hItem = hit_test.hItem;
-                item.mask = TVIF_TEXT | TVIF_STATE | TVIF_IMAGE;
-                item.pszText = buffer;
-                item.cchTextMax = ARRAYSIZE(buffer);
-                TreeView_GetItem(hwnd, &item);
-                SendMessageW(hwnd, TVM_GETITEMW, 0, (LPARAM)&item);
-                // WCHAR buffer[1024] = {};
-                // wsprintfW(buffer, L"%s", item.pszText);
-                // SendMessageW(_parent, WM_SETTEXT, 0, LPARAM(item.pszText));
-                Alert(L"State: %d, Image: %d", item.state, item.iImage);
-
-                TreeView_SelectItem(hwnd, hit_test.hItem);
-                //InvalidateRect(hwnd, NULL, 0);
+                wsprintfW(buffer, L"%d, %d, %s", pts.x, pts.y, item.pszText);
+                SendMessageW(_parent, WM_SETTEXT, 0, LPARAM(buffer));
+            }
+            else
+            {
+                wsprintfW(buffer, L"%d, %d", pts.x, pts.y);
+                SendMessageW(_parent, WM_SETTEXT, 0, LPARAM(buffer));
             }
         } break;
+        // case WM_LBUTTONDOWN: {
+        //     POINTS pts = MAKEPOINTS(lParam);
+        //     TVITEMW item;
+        //     WCHAR buffer[260] = {};
+        //     if (NavigationTree_HitTest(hwnd, pts, &item, buffer, ARRAYSIZE(buffer)))
+        //     {
+        //         Alert(L"Item Found: %s",  item.pszText);
+        //         //Alert(L"Item Found");
+        //     }
+        //     else
+        //     {
+        //         Alert(L"No Item Found");
+        //     }
+        // } break;
     }
     return DefSubclassProc(hwnd, msg, wParam, lParam);
 }
@@ -231,29 +269,19 @@ void CreateNavigationTree(NavigationTree *tree, HWND parent, HINSTANCE hInstance
 
     tree->font = (HFONT)SendMessage(tree->hwnd, WM_GETFONT, NULL, NULL);
     
-
     // Create and Associate the image list with the tree-view control. 
     SHGetImageList(SHIL_SMALL, IID_IImageList, (void **)&tree->image_list);
     TreeView_SetImageList(hwnd_tree, tree->image_list, TVSIL_NORMAL); 
-    //TreeView_SetImageList(hwnd_tree, himagelist, TVSIL_STATE);
-
-    // indent by 10 pixels
-    //TreeView_SetIndent(hwnd_tree, 20);
-
-    //Alert(L"Indent Width: %d", TreeView_GetIndent(hwnd_tree));
 
     // set top and bottom padding to 3px by adding 6 to height
     int item_height = TreeView_GetItemHeight(hwnd_tree);
     item_height += 6;
     TreeView_SetItemHeight(hwnd_tree, item_height);
-
-    //TreeView_setstat
-    //TreeView_SetLineColor(hwnd_tree, 0x00FFFFFF);
     
     tree->hwnd = hwnd_tree;
 }
 
-HTREEITEM InsertNavigationItem(NavigationTree *tree, SHFILEINFOW *item, HTREEITEM parent, HTREEITEM prev, int level, int option)
+HTREEITEM InsertNavigationItem(NavigationTree *tree, SHFILEINFOW *item, HTREEITEM parent, HTREEITEM prev, LPWSTR path)
 {
     TVITEMW tvi;
     TVINSERTSTRUCTW tvins;
@@ -261,14 +289,13 @@ HTREEITEM InsertNavigationItem(NavigationTree *tree, SHFILEINFOW *item, HTREEITE
     ICONINFO iconinfo;
 
     tvi.mask = TVIF_TEXT | TVIF_IMAGE | TVIF_PARAM | TVIF_CHILDREN | TVIF_STATE;
-    //tvi.stateMask = TVIF_S
 
     tvi.pszText = item->szDisplayName;
-    tvi.cchTextMax = sizeof(tvi.pszText)/sizeof(tvi.pszText[0]);
+    tvi.cchTextMax = ARRAYSIZE(item->szDisplayName);
     tvi.iImage = item->iIcon;
-    tvi.lParam = (LPARAM)level;
+    tvi.lParam = LPARAM(path);
     tvi.cChildren = 1;
-    tvi.state = option == 1 ? TVIS_SELECTED : 0;
+    tvi.state = 0;
     tvins.item = tvi;
     tvins.hParent = parent;
     tvins.hInsertAfter = prev;
@@ -313,7 +340,9 @@ void FillNavigationRootItems(NavigationTree *tree)
 
         if (option == 0) option = 1;
         else if (option == 1) option = 0;
-        prev = InsertNavigationItem(tree, &shell_file_info, TVI_ROOT, prev, 0, option);
+        LPWSTR path = (LPWSTR)malloc(sizeof(WCHAR)*MAX_PATH);
+        SHGetPathFromIDListW(abs_pidl, path);
+        prev = InsertNavigationItem(tree, &shell_file_info, TVI_ROOT, prev, path);
 
         CoTaskMemFree(abs_pidl);
         CoTaskMemFree(item_pidl);
