@@ -24,10 +24,21 @@ using RectF = Gdiplus::RectF;
 typedef struct {
     WCHAR path[MAX_PATH];
     int level;
+    bool items_checked;
+    bool has_items;
+    bool expanded;
 } NavigationItemData;
 
 void NavigationTree_OnItemPaint(NavigationTree *tree, LPNMTVCUSTOMDRAW nmtvcd);
-//LRESULT NavigationTree_OnNotify(NavigationTree *tree, LPNMHDR nmhdr, WPARAM wParam);
+void FillNavigationTreeItem(NavigationTree *tree, TVITEMW *parent);
+
+void SetExplorerBrowserPath(LPWSTR path, IExplorerBrowser *browser)
+{
+    LPITEMIDLIST pidl;
+    SHParseDisplayName(path, NULL, &pidl, NULL, NULL);
+    browser->BrowseToIDList(pidl, SBSP_ABSOLUTE);
+    CoTaskMemFree(pidl);
+}
 
 PointF points[6] = {
      {1,0}
@@ -133,7 +144,9 @@ void NavigationTree_OnItemPaint(NavigationTree *tree, LPNMTVCUSTOMDRAW nmtvcd)
 
     //Alert(L"%d %d", item.state, item.stateMask);
 
-    int indent = ((NavigationItemData*)item.lParam)->level * 15;
+    NavigationItemData *data = (NavigationItemData*)item.lParam;
+    int indent = data->level * 15;
+    bool show_arrow = data->items_checked == 0 || data->has_items;
 
     if (item.state & TVIS_SELECTED) {
         g.FillRectangle(&bk_selected_brush, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top);
@@ -150,8 +163,11 @@ void NavigationTree_OnItemPaint(NavigationTree *tree, LPNMTVCUSTOMDRAW nmtvcd)
     int h = GetHeight(local_points, ARRAYSIZE(local_points));
     int w = GetWidth(local_points, ARRAYSIZE(local_points));
     indent += 5;
-    Translate(local_points, ARRAYSIZE(local_points), rc.left + indent, rc.top + ((rc.bottom - rc.top) - h)/2);
-    g.FillPolygon(&arrow_brush, local_points, ARRAYSIZE(local_points));
+    if (show_arrow)
+    {
+        Translate(local_points, ARRAYSIZE(local_points), rc.left + indent, rc.top + ((rc.bottom - rc.top) - h)/2);
+        g.FillPolygon(&arrow_brush, local_points, ARRAYSIZE(local_points));
+    }
 
     int cx,cy;
     ImageList_GetIconSize(tree->image_list, &cx, &cy);
@@ -205,23 +221,48 @@ LRESULT NavigationTree_SubClassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
                 SendMessageW(GetParent(hwnd), WM_SETTEXT, 0, LPARAM(buffer));
             }
         } break;
+        case WM_LBUTTONDBLCLK: {
+            // prevent default behavior when double clicking
+            // which causes the treeview to try expanding
+            return 1; 
+        } break;
         case WM_LBUTTONDOWN: {
             POINTS pts = MAKEPOINTS(lParam);
             TVITEMW item;
             WCHAR buffer[260] = {};
             if (NavigationTree_HitTest(hwnd, pts, &item, buffer, ARRAYSIZE(buffer)))
             {
-                if (pts.x < 20)
+                NavigationItemData *data = (NavigationItemData*)item.lParam;
+                int chevron_start = data->level * 15;
+                int chevron_end = chevron_start + 15;
+                if ((pts.x > chevron_start && pts.x < chevron_end) // first check for the arrow position
+                    && (data->items_checked == 0 || data->has_items)) // do expand logic we haven't items_checked before OR it has items
                 {
-                    TreeView_Expand(hwnd, item.hItem, TVE_TOGGLE);
+                    if (data->expanded)
+                    {
+                        TreeView_Expand(hwnd, item.hItem, TVE_COLLAPSE);
+                        data->expanded = 0;
+                    }
+                    else
+                    {
+                        FillNavigationTreeItem(&nav_tree, &item);
+                        if (data->has_items)
+                        {
+                            TreeView_Expand(hwnd, item.hItem, TVE_EXPAND);
+                            data->expanded = 1;
+                        }
+                        else
+                        {
+                            SetExplorerBrowserPath(data->path, _peb1);
+                        }
+                    }
                 }
                 else
                 {
-                    LPITEMIDLIST pidl;
-                    SHParseDisplayName(((NavigationItemData*)item.lParam)->path, NULL, &pidl, NULL, NULL);
-                    _peb1->BrowseToIDList(pidl, SBSP_ABSOLUTE);
-                    CoTaskMemFree(pidl);
+                    SetExplorerBrowserPath(data->path, _peb1);
                 }
+                // prevent default behavior by returning  here
+                //return 1;
             }
             else
             {
@@ -298,6 +339,7 @@ void FillNavigationRootItems(NavigationTree *tree)
     IShellFolder *drives_shell_folder;
     IEnumIDList *enum_id_list;
     SHFILEINFOW shell_file_info;
+    HTREEITEM prev = NULL;
 
     hr = SHGetDesktopFolder(&desktop_shell_folder);
     if FAILED(hr) { MessageBoxW(NULL, L"SHGetDesktopFolder failed", L"Error", MB_OK); return; }
@@ -309,7 +351,6 @@ void FillNavigationRootItems(NavigationTree *tree)
     hr = drives_shell_folder->EnumObjects(NULL, SHCONTF_FOLDERS, &enum_id_list);
     if FAILED(hr) { MessageBoxW(NULL, L"desktop_shell_folder->EnumObjects failed", L"Error", MB_OK); return; }
 
-    HTREEITEM prev = NULL;
     while (S_OK == enum_id_list->Next(1, &item_pidl, NULL))
     {
         RunMainWindowLoopWhileMessagesExist();
@@ -321,27 +362,10 @@ void FillNavigationRootItems(NavigationTree *tree)
             ,sizeof(SHFILEINFOW)
             ,SHGFI_PIDL|SHGFI_DISPLAYNAME|SHGFI_ATTRIBUTES|SHGFI_SYSICONINDEX|SHGFI_ICON); //  | SHGFI_LARGEICON
 
-        NavigationItemData *data = (NavigationItemData*)malloc(sizeof(NavigationItemData));
+        NavigationItemData *data = (NavigationItemData*)calloc(1, sizeof(NavigationItemData));
         data->level = 0;
         SHGetPathFromIDListW(abs_pidl, data->path);
         prev = InsertNavigationItem(tree, &shell_file_info, TVI_ROOT, prev, data);
-
-
-
-
-
-        // LPITEMIDLIST temp_pidl;
-        // SHParseDisplayName(L"C:\\Users", NULL, &temp_pidl, NULL, NULL);
-        SHFILEINFOW temp_info;
-        SHGetFileInfoW((LPCWSTR)abs_pidl, NULL, &temp_info, sizeof(SHFILEINFOW),SHGFI_PIDL|SHGFI_DISPLAYNAME|SHGFI_ATTRIBUTES|SHGFI_SYSICONINDEX|SHGFI_ICON);
-        data = (NavigationItemData*)malloc(sizeof(NavigationItemData));
-        wsprintfW(data->path, (LPCWSTR)abs_pidl);
-        data->level = 1;
-        InsertNavigationItem(tree, &temp_info, prev, prev, data);
-
-
-
-
 
         CoTaskMemFree(abs_pidl);
         CoTaskMemFree(item_pidl);
@@ -353,9 +377,54 @@ void FillNavigationRootItems(NavigationTree *tree)
     CoTaskMemFree(folder_pidl);
 }
 
-void FillNavigationTreeItem(NavigationTree *tree, TVITEMW parent)
+void FillNavigationTreeItem(NavigationTree *tree, TVITEMW *parent)
 {
     HRESULT hr;
+    LPITEMIDLIST folder_pidl, item_pidl, abs_pidl;
+    IShellFolder *desktop_shell_folder;
+    IShellFolder *drives_shell_folder;
+    IEnumIDList *enum_id_list;
+    SHFILEINFOW shell_file_info;
+    NavigationItemData *parent_data = (NavigationItemData*)parent->lParam;
+    HTREEITEM prev = parent->hItem;
+    if (parent_data->items_checked) return;
+    parent_data->items_checked = 1;
 
-    
+    hr = SHGetDesktopFolder(&desktop_shell_folder);
+    if FAILED(hr) { MessageBoxW(NULL, L"SHGetDesktopFolder failed", L"Error", MB_OK); return; }
+
+    hr = SHParseDisplayName(parent_data->path, NULL, &folder_pidl, NULL, NULL);
+    if FAILED(hr) { MessageBoxW(NULL, L"SHParseDisplayName failed", L"Error", MB_OK); return; }
+
+    desktop_shell_folder->BindToObject(folder_pidl, NULL, IID_IShellFolder, (void **)&drives_shell_folder);
+
+    hr = drives_shell_folder->EnumObjects(NULL, SHCONTF_FOLDERS, &enum_id_list);
+    if FAILED(hr) { MessageBoxW(NULL, L"desktop_shell_folder->EnumObjects failed", L"Error", MB_OK); return; }
+
+    while (S_OK == enum_id_list->Next(1, &item_pidl, NULL))
+    {
+        RunMainWindowLoopWhileMessagesExist();
+
+        abs_pidl = ILCombine(folder_pidl, item_pidl);
+        SHGetFileInfoW((LPCWSTR)abs_pidl,
+            0 // dwFileAttributes
+            ,&shell_file_info
+            ,sizeof(SHFILEINFOW)
+            ,SHGFI_PIDL|SHGFI_DISPLAYNAME|SHGFI_ATTRIBUTES|SHGFI_SYSICONINDEX|SHGFI_ICON); //  | SHGFI_LARGEICON
+
+        NavigationItemData *data = (NavigationItemData*)calloc(1, sizeof(NavigationItemData));
+        data->level = parent_data->level + 1;
+        SHGetPathFromIDListW(abs_pidl, data->path);
+        prev = InsertNavigationItem(tree, &shell_file_info, TVI_ROOT, prev, data);
+        parent_data->has_items = 1;
+
+        CoTaskMemFree(abs_pidl);
+        CoTaskMemFree(item_pidl);
+    }
+
+    desktop_shell_folder->Release();
+    drives_shell_folder->Release();
+    enum_id_list->Release();
+    CoTaskMemFree(folder_pidl);
 }
+
