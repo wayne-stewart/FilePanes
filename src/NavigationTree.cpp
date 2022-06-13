@@ -192,7 +192,7 @@ BOOL NavigationTree_HitTest(HWND hwnd, POINTS pts, TVITEMW *item, LPWSTR buffer,
     if (hit_test.hItem != NULL)
     {
         item->hItem = hit_test.hItem;
-        item->mask = TVIF_TEXT | TVIF_STATE;
+        item->mask = TVIF_TEXT | TVIF_STATE | TVIF_CHILDREN;
         item->pszText = buffer;
         item->cchTextMax = buffer_size;
         SendMessageW(hwnd, TVM_GETITEMW, 0, (LPARAM)item);
@@ -240,8 +240,9 @@ LRESULT NavigationTree_SubClassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
                 {
                     if (data->expanded)
                     {
-                        TreeView_Expand(hwnd, item.hItem, TVE_COLLAPSE);
+                        BOOL ret = TreeView_Expand(hwnd, item.hItem, TVE_COLLAPSE);
                         data->expanded = 0;
+                        //Alert(L"ret: %d", ret);
                     }
                     else
                     {
@@ -415,7 +416,7 @@ void FillNavigationTreeItem(NavigationTree *tree, TVITEMW *parent)
         NavigationItemData *data = (NavigationItemData*)calloc(1, sizeof(NavigationItemData));
         data->level = parent_data->level + 1;
         SHGetPathFromIDListW(abs_pidl, data->path);
-        prev = InsertNavigationItem(tree, &shell_file_info, TVI_ROOT, prev, data);
+        prev = InsertNavigationItem(tree, &shell_file_info, parent->hItem, TVI_LAST, data);
         parent_data->has_items = 1;
 
         CoTaskMemFree(abs_pidl);

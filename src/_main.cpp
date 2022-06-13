@@ -91,6 +91,13 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
                         //TreeView_Expand(pnmtv->hdr.hwndFrom, pnmtv->itemNew.hItem, TVE_TOGGLE);
                         //SendMessageW(pnmtv->hdr.hwndFrom, TVM_EXPAND, (WPARAM)(TVE_TOGGLE), LPARAM(pnmtv->itemNew.hItem));
                     } break;
+                    // case TVN_ITEMEXPANDINGW: {
+                    //     LPNMTREEVIEW nmtv = (LPNMTREEVIEW)nmhdr;
+                    //     if (nmtv->action == TVE_COLLAPSE)
+                    //         Alert(L"Collapsing");
+                    //     else if (nmtv->action == TVE_EXPAND)
+                    //         Alert(L"Expanding");
+                    // } break;
                 }
             }}
             break;
