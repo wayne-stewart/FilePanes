@@ -11,6 +11,8 @@
 //#include <gdiplusinit.h>
 
 #include "MainWindow.h"
+#include "NavigationTree.h"
+#include "GlobalState.h"
 
 using Graphics = Gdiplus::Graphics;
 using SolidBrush = Gdiplus::SolidBrush;
@@ -19,15 +21,13 @@ using PointF = Gdiplus::PointF;
 using Font = Gdiplus::Font;
 using RectF = Gdiplus::RectF;
 
-typedef struct
-{
-    HWND hwnd;
-    HIMAGELIST image_list;
-    HFONT font;
-} NavigationTree;
+typedef struct {
+    WCHAR path[MAX_PATH];
+    int level;
+} NavigationItemData;
 
 void NavigationTree_OnItemPaint(NavigationTree *tree, LPNMTVCUSTOMDRAW nmtvcd);
-LRESULT NavigationTree_OnNotify(NavigationTree *tree, LPNMHDR nmhdr, WPARAM wParam);
+//LRESULT NavigationTree_OnNotify(NavigationTree *tree, LPNMHDR nmhdr, WPARAM wParam);
 
 PointF points[6] = {
      {1,0}
@@ -44,6 +44,17 @@ float GetHeight(PointF *points, int count)
     for(int i = 0; i < count; i++) {
         if (points[i].Y > max) {
             max = points[i].Y;
+        }
+    }
+    return max;
+}
+
+float GetWidth(PointF *points, int count)
+{
+    float max = 0;
+    for(int i = 0; i < count; i++) {
+        if (points[i].X > max) {
+            max = points[i].X;
         }
     }
     return max;
@@ -115,12 +126,14 @@ void NavigationTree_OnItemPaint(NavigationTree *tree, LPNMTVCUSTOMDRAW nmtvcd)
     TVITEMW item;
     WCHAR buffer[260] = {};
     item.hItem = hitem;
-    item.mask = TVIF_TEXT | TVIF_STATE | TVIF_IMAGE;
+    item.mask = TVIF_TEXT | TVIF_STATE | TVIF_IMAGE | TVIF_PARAM;
     item.pszText = buffer;
     item.cchTextMax = ARRAYSIZE(buffer);
     SendMessage(tree->hwnd, TVM_GETITEMW, 0, LPARAM(&item));
 
     //Alert(L"%d %d", item.state, item.stateMask);
+
+    int indent = ((NavigationItemData*)item.lParam)->level * 15;
 
     if (item.state & TVIS_SELECTED) {
         g.FillRectangle(&bk_selected_brush, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top);
@@ -135,18 +148,22 @@ void NavigationTree_OnItemPaint(NavigationTree *tree, LPNMTVCUSTOMDRAW nmtvcd)
     PointF local_points[6];
     memcpy(local_points, points, sizeof(points));
     int h = GetHeight(local_points, ARRAYSIZE(local_points));
-    Translate(local_points, ARRAYSIZE(local_points), rc.left + 5, rc.top + ((rc.bottom - rc.top) - h)/2);
+    int w = GetWidth(local_points, ARRAYSIZE(local_points));
+    indent += 5;
+    Translate(local_points, ARRAYSIZE(local_points), rc.left + indent, rc.top + ((rc.bottom - rc.top) - h)/2);
     g.FillPolygon(&arrow_brush, local_points, ARRAYSIZE(local_points));
 
     int cx,cy;
     ImageList_GetIconSize(tree->image_list, &cx, &cy);
-    ImageList_Draw(tree->image_list, item.iImage, hdc, rc.left+18, rc.top + (((rc.bottom - rc.top) - cy)/2), ILD_TRANSPARENT);
+    indent += w + 10;
+    ImageList_Draw(tree->image_list, item.iImage, hdc, rc.left + indent, rc.top + (((rc.bottom - rc.top) - cy)/2), ILD_TRANSPARENT);
 
     RectF layout_rect(0.0, 0.0, 100.0, 50.0);
     RectF bounding_box;
     g.MeasureString(L"Wg", 2, &font, layout_rect, &bounding_box);
+    indent += cx + 2;
     PointF text_point;
-    text_point.X = rc.left + 35;
+    text_point.X = rc.left + indent;
     text_point.Y = rc.top + ((((rc.bottom - rc.top) - (bounding_box.Height)))/2); 
     g.DrawString((LPCWSTR)item.pszText, wcslen((LPCWSTR)item.pszText), &font, text_point, &text_brush);
 }
@@ -188,20 +205,29 @@ LRESULT NavigationTree_SubClassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
                 SendMessageW(GetParent(hwnd), WM_SETTEXT, 0, LPARAM(buffer));
             }
         } break;
-        // case WM_LBUTTONDOWN: {
-        //     POINTS pts = MAKEPOINTS(lParam);
-        //     TVITEMW item;
-        //     WCHAR buffer[260] = {};
-        //     if (NavigationTree_HitTest(hwnd, pts, &item, buffer, ARRAYSIZE(buffer)))
-        //     {
-        //         Alert(L"Item Found: %s",  item.pszText);
-        //         //Alert(L"Item Found");
-        //     }
-        //     else
-        //     {
-        //         Alert(L"No Item Found");
-        //     }
-        // } break;
+        case WM_LBUTTONDOWN: {
+            POINTS pts = MAKEPOINTS(lParam);
+            TVITEMW item;
+            WCHAR buffer[260] = {};
+            if (NavigationTree_HitTest(hwnd, pts, &item, buffer, ARRAYSIZE(buffer)))
+            {
+                if (pts.x < 20)
+                {
+                    TreeView_Expand(hwnd, item.hItem, TVE_TOGGLE);
+                }
+                else
+                {
+                    LPITEMIDLIST pidl;
+                    SHParseDisplayName(((NavigationItemData*)item.lParam)->path, NULL, &pidl, NULL, NULL);
+                    _peb1->BrowseToIDList(pidl, SBSP_ABSOLUTE);
+                    CoTaskMemFree(pidl);
+                }
+            }
+            else
+            {
+                Alert(L"No Item Found");
+            }
+        } break;
     }
     return DefSubclassProc(hwnd, msg, wParam, lParam);
 }
@@ -215,7 +241,7 @@ void CreateNavigationTree(NavigationTree *tree, HWND parent, HINSTANCE hInstance
         NULL // dwExStyle
         , L"SysTreeView32" // lpClassName
         , L"Navigation Tree" //lpWindowName
-        ,WS_VISIBLE | WS_CHILD | WS_BORDER | TVS_FULLROWSELECT | TVS_DISABLEDRAGDROP | TVS_TRACKSELECT //| TVS_HASLINES | TVS_LINESATROOT// dwStyle
+        ,WS_VISIBLE | WS_CHILD | WS_BORDER | TVS_FULLROWSELECT | TVS_DISABLEDRAGDROP | TVS_TRACKSELECT //| TVS_HASBUTTONS | TVS_HASLINES | TVS_LINESATROOT// dwStyle
         , rc->left, rc->top // x, y
         , rc->right - rc->left, rc->bottom - rc->top // width, height
         , parent // hwndParent
@@ -240,7 +266,7 @@ void CreateNavigationTree(NavigationTree *tree, HWND parent, HINSTANCE hInstance
     tree->hwnd = hwnd_tree;
 }
 
-HTREEITEM InsertNavigationItem(NavigationTree *tree, SHFILEINFOW *item, HTREEITEM parent, HTREEITEM prev, LPWSTR path)
+HTREEITEM InsertNavigationItem(NavigationTree *tree, SHFILEINFOW *item, HTREEITEM parent, HTREEITEM prev, NavigationItemData *data)
 {
     TVITEMW tvi;
     TVINSERTSTRUCTW tvins;
@@ -252,7 +278,7 @@ HTREEITEM InsertNavigationItem(NavigationTree *tree, SHFILEINFOW *item, HTREEITE
     tvi.pszText = item->szDisplayName;
     tvi.cchTextMax = ARRAYSIZE(item->szDisplayName);
     tvi.iImage = item->iIcon;
-    tvi.lParam = LPARAM(path);
+    tvi.lParam = LPARAM(data);
     tvi.cChildren = 1;
     tvi.state = 0;
     tvins.item = tvi;
@@ -263,7 +289,6 @@ HTREEITEM InsertNavigationItem(NavigationTree *tree, SHFILEINFOW *item, HTREEITE
 
     return hti;
 }
-
 
 void FillNavigationRootItems(NavigationTree *tree)
 {
@@ -284,7 +309,6 @@ void FillNavigationRootItems(NavigationTree *tree)
     hr = drives_shell_folder->EnumObjects(NULL, SHCONTF_FOLDERS, &enum_id_list);
     if FAILED(hr) { MessageBoxW(NULL, L"desktop_shell_folder->EnumObjects failed", L"Error", MB_OK); return; }
 
-    int option = 0;
     HTREEITEM prev = NULL;
     while (S_OK == enum_id_list->Next(1, &item_pidl, NULL))
     {
@@ -297,11 +321,27 @@ void FillNavigationRootItems(NavigationTree *tree)
             ,sizeof(SHFILEINFOW)
             ,SHGFI_PIDL|SHGFI_DISPLAYNAME|SHGFI_ATTRIBUTES|SHGFI_SYSICONINDEX|SHGFI_ICON); //  | SHGFI_LARGEICON
 
-        if (option == 0) option = 1;
-        else if (option == 1) option = 0;
-        LPWSTR path = (LPWSTR)malloc(sizeof(WCHAR)*MAX_PATH);
-        SHGetPathFromIDListW(abs_pidl, path);
-        prev = InsertNavigationItem(tree, &shell_file_info, TVI_ROOT, prev, path);
+        NavigationItemData *data = (NavigationItemData*)malloc(sizeof(NavigationItemData));
+        data->level = 0;
+        SHGetPathFromIDListW(abs_pidl, data->path);
+        prev = InsertNavigationItem(tree, &shell_file_info, TVI_ROOT, prev, data);
+
+
+
+
+
+        // LPITEMIDLIST temp_pidl;
+        // SHParseDisplayName(L"C:\\Users", NULL, &temp_pidl, NULL, NULL);
+        SHFILEINFOW temp_info;
+        SHGetFileInfoW((LPCWSTR)abs_pidl, NULL, &temp_info, sizeof(SHFILEINFOW),SHGFI_PIDL|SHGFI_DISPLAYNAME|SHGFI_ATTRIBUTES|SHGFI_SYSICONINDEX|SHGFI_ICON);
+        data = (NavigationItemData*)malloc(sizeof(NavigationItemData));
+        wsprintfW(data->path, (LPCWSTR)abs_pidl);
+        data->level = 1;
+        InsertNavigationItem(tree, &temp_info, prev, prev, data);
+
+
+
+
 
         CoTaskMemFree(abs_pidl);
         CoTaskMemFree(item_pidl);
@@ -313,9 +353,9 @@ void FillNavigationRootItems(NavigationTree *tree)
     CoTaskMemFree(folder_pidl);
 }
 
-void ExpandNavigationTreeItem(NavigationTree *tree, HTREEITEM parent)
+void FillNavigationTreeItem(NavigationTree *tree, TVITEMW parent)
 {
     HRESULT hr;
 
-
+    
 }

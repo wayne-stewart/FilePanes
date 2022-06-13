@@ -24,9 +24,7 @@
 #include "ExplorerBrowserCOM.cpp"
 #include "ShellUtil.cpp"
 
-NavigationTree nav_tree = {};
-IExplorerBrowser *_peb1;
-IExplorerBrowser *_peb2;
+
 
 void ComputeLayout(HWND hwnd, RECT *rc0, RECT *rc1, RECT *rc2)
 {
@@ -79,29 +77,25 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             {
                 switch (nmhdr->code)
                 {
-                    case NM_CLICK:{
-
-                    } break;
                     case NM_CUSTOMDRAW: {
                         return NavigationTree_OnCustomDraw(&nav_tree, (LPNMTVCUSTOMDRAW)nmhdr);
                     } break;
                     case TVN_SELCHANGEDW: {
-                        LPNMTREEVIEWW pnmtv = (LPNMTREEVIEWW)nmhdr;
+                        //LPNMTREEVIEWW pnmtv = (LPNMTREEVIEWW)nmhdr;
                         //Alert(L"SEL CHANGED: %s", pnmtv->itemNew.lParam);
-                        LPITEMIDLIST pidl;
-                        SHParseDisplayName((PCWSTR)pnmtv->itemNew.lParam, NULL, &pidl, NULL, NULL);
-                        _peb1->BrowseToIDList(pidl, SBSP_ABSOLUTE);
-                        CoTaskMemFree(pidl);
+                        // LPITEMIDLIST pidl;
+                        // SHParseDisplayName((PCWSTR)pnmtv->itemNew.lParam, NULL, &pidl, NULL, NULL);
+                        // _peb1->BrowseToIDList(pidl, SBSP_ABSOLUTE);
+                        // CoTaskMemFree(pidl);
+
+                        //TreeView_Expand(pnmtv->hdr.hwndFrom, pnmtv->itemNew.hItem, TVE_TOGGLE);
+                        //SendMessageW(pnmtv->hdr.hwndFrom, TVM_EXPAND, (WPARAM)(TVE_TOGGLE), LPARAM(pnmtv->itemNew.hItem));
                     } break;
                 }
-                // LRESULT ret = NavigationTree_OnNotify(&nav_tree, nmhdr, wParam);
-                // if (ret == NULL) goto WNDPROC_DEFAULT;
-                // return ret;
             }}
             break;
     }
 
-    WNDPROC_DEFAULT:
     return DefWindowProcW(hwnd, msg, wParam, lParam);
 }
 
