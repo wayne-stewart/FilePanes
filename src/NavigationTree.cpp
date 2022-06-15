@@ -1,36 +1,5 @@
 
-#include <windows.h>
-#include <commctrl.h>
-#include <wingdi.h>
-#include <Shlwapi.h>
-#include <ShlObj.h>
-#include <ShlObj_core.h>
-#include <KnownFolders.h>
-#include <commoncontrols.h>
-#include <Gdiplus.h>
-//#include <gdiplusinit.h>
-
-#include "MainWindow.h"
-#include "NavigationTree.h"
-#include "GlobalState.h"
-
-using Graphics = Gdiplus::Graphics;
-using SolidBrush = Gdiplus::SolidBrush;
-using Color = Gdiplus::Color;
-using PointF = Gdiplus::PointF;
-using Font = Gdiplus::Font;
-using RectF = Gdiplus::RectF;
-
-typedef struct {
-    WCHAR path[MAX_PATH];
-    int level;
-    bool items_checked;
-    bool has_items;
-    bool expanded;
-} NavigationItemData;
-
-void NavigationTree_OnItemPaint(NavigationTree *tree, LPNMTVCUSTOMDRAW nmtvcd);
-void FillNavigationTreeItem(NavigationTree *tree, TVITEMW *parent);
+#include "FilePane_Common.h"
 
 void SetExplorerBrowserPath(LPWSTR path, IExplorerBrowser *browser)
 {
@@ -39,15 +8,6 @@ void SetExplorerBrowserPath(LPWSTR path, IExplorerBrowser *browser)
     browser->BrowseToIDList(pidl, SBSP_ABSOLUTE);
     CoTaskMemFree(pidl);
 }
-
-PointF points[6] = {
-     {1,0}
-    ,{4,3}
-    ,{1,6}
-    ,{0,5}
-    ,{2,3}
-    ,{0,1}
-};
 
 float GetHeight(PointF *points, int count)
 {
@@ -89,7 +49,8 @@ void Translate(PointF *points, int count, float x, float y)
     }
 }
 
-LRESULT NavigationTree_OnCustomDraw(NavigationTree *tree, LPNMTVCUSTOMDRAW pnmtvcd)
+LRESULT 
+NavigationTree_OnCustomDraw(NavigationTree *tree, LPNMTVCUSTOMDRAW pnmtvcd)
 {
     switch (pnmtvcd->nmcd.dwDrawStage)
     {
@@ -111,9 +72,11 @@ LRESULT NavigationTree_OnCustomDraw(NavigationTree *tree, LPNMTVCUSTOMDRAW pnmtv
             //OnPaintTreeViewItem(pnmtvcd->nmcd.hdc, pnmtvcd->nmcd.rc);
             break;
     }
+    return 0;
 }
 
-void NavigationTree_OnItemPaint(NavigationTree *tree, LPNMTVCUSTOMDRAW nmtvcd)
+void 
+NavigationTree_OnItemPaint(NavigationTree *tree, LPNMTVCUSTOMDRAW nmtvcd)
 {
     RECT rc = nmtvcd->nmcd.rc;
     // not sure what these 0 height items are, but we don't need to draw them.
@@ -159,7 +122,7 @@ void NavigationTree_OnItemPaint(NavigationTree *tree, LPNMTVCUSTOMDRAW nmtvcd)
     }  
 
     PointF local_points[6];
-    memcpy(local_points, points, sizeof(points));
+    memcpy(local_points, g_right_arrow_points, sizeof(g_right_arrow_points));
     int h = GetHeight(local_points, ARRAYSIZE(local_points));
     int w = GetWidth(local_points, ARRAYSIZE(local_points));
     indent += 5;
@@ -184,7 +147,8 @@ void NavigationTree_OnItemPaint(NavigationTree *tree, LPNMTVCUSTOMDRAW nmtvcd)
     g.DrawString((LPCWSTR)item.pszText, wcslen((LPCWSTR)item.pszText), &font, text_point, &text_brush);
 }
 
-BOOL NavigationTree_HitTest(HWND hwnd, POINTS pts, TVITEMW *item, LPWSTR buffer, int buffer_size)
+BOOL 
+NavigationTree_HitTest(HWND hwnd, POINTS pts, TVITEMW *item, LPWSTR buffer, int buffer_size)
 {
     TVHITTESTINFO hit_test;
     POINTSTOPOINT(hit_test.pt, pts);
@@ -201,25 +165,26 @@ BOOL NavigationTree_HitTest(HWND hwnd, POINTS pts, TVITEMW *item, LPWSTR buffer,
     return FALSE;
 }
 
-LRESULT NavigationTree_SubClassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+LRESULT 
+NavigationTree_SubClassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
 {
     switch(msg)
     {
         case WM_MOUSEMOVE: {
-            POINTS pts = MAKEPOINTS(lParam);
-            TVITEMW item;
-            WCHAR item_buffer[260] = {};
-            WCHAR buffer[128] = {};
-            if (NavigationTree_HitTest(hwnd, pts, &item, item_buffer, ARRAYSIZE(item_buffer)))
-            {
-                wsprintfW(buffer, L"%d, %d, %s", pts.x, pts.y, item.pszText);
-                SendMessageW(GetParent(hwnd), WM_SETTEXT, 0, LPARAM(buffer));
-            }
-            else
-            {
-                wsprintfW(buffer, L"%d, %d", pts.x, pts.y);
-                SendMessageW(GetParent(hwnd), WM_SETTEXT, 0, LPARAM(buffer));
-            }
+            // POINTS pts = MAKEPOINTS(lParam);
+            // TVITEMW item;
+            // WCHAR item_buffer[260] = {};
+            // WCHAR buffer[128] = {};
+            // if (NavigationTree_HitTest(hwnd, pts, &item, item_buffer, ARRAYSIZE(item_buffer)))
+            // {
+            //     wsprintfW(buffer, L"%d, %d, %s", pts.x, pts.y, item.pszText);
+            //     SendMessageW(GetParent(hwnd), WM_SETTEXT, 0, LPARAM(buffer));
+            // }
+            // else
+            // {
+            //     wsprintfW(buffer, L"%d, %d", pts.x, pts.y);
+            //     SendMessageW(GetParent(hwnd), WM_SETTEXT, 0, LPARAM(buffer));
+            // }
         } break;
         case WM_LBUTTONDBLCLK: {
             // prevent default behavior when double clicking
@@ -232,6 +197,7 @@ LRESULT NavigationTree_SubClassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
             WCHAR buffer[260] = {};
             if (NavigationTree_HitTest(hwnd, pts, &item, buffer, ARRAYSIZE(buffer)))
             {
+                ExplorerBrowserPane *explorer_pane = FilePane_GetActiveExplorerPane();
                 NavigationItemData *data = (NavigationItemData*)item.lParam;
                 int chevron_start = data->level * 15;
                 int chevron_end = chevron_start + 15;
@@ -246,7 +212,8 @@ LRESULT NavigationTree_SubClassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
                     }
                     else
                     {
-                        FillNavigationTreeItem(&nav_tree, &item);
+                        FolderBrowserPane *folder_pane = FilePane_GetFolderBrowserPane();
+                        NavigationTree_FillItem(folder_pane->tree, &item);
                         if (data->has_items)
                         {
                             TreeView_Expand(hwnd, item.hItem, TVE_EXPAND);
@@ -254,27 +221,28 @@ LRESULT NavigationTree_SubClassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
                         }
                         else
                         {
-                            SetExplorerBrowserPath(data->path, _peb1);
+                            SetExplorerBrowserPath(data->path, explorer_pane->browser);
                         }
                     }
                 }
                 else
                 {
-                    SetExplorerBrowserPath(data->path, _peb1);
+                    SetExplorerBrowserPath(data->path, explorer_pane->browser);
                 }
                 // prevent default behavior by returning  here
                 //return 1;
             }
             else
             {
-                Alert(L"No Item Found");
+                //Alert(L"No Item Found");
             }
         } break;
     }
     return DefSubclassProc(hwnd, msg, wParam, lParam);
 }
 
-void CreateNavigationTree(NavigationTree *tree, HWND parent, HINSTANCE hInstance, RECT *rc)
+void 
+NavigationTree_Create(NavigationTree *tree, HWND parent, HINSTANCE hInstance, RECT *rc)
 {
     RECT rcClient;
 
@@ -283,7 +251,7 @@ void CreateNavigationTree(NavigationTree *tree, HWND parent, HINSTANCE hInstance
         NULL // dwExStyle
         , L"SysTreeView32" // lpClassName
         , L"Navigation Tree" //lpWindowName
-        ,WS_VISIBLE | WS_CHILD | WS_BORDER | TVS_FULLROWSELECT | TVS_DISABLEDRAGDROP | TVS_TRACKSELECT //| TVS_HASBUTTONS | TVS_HASLINES | TVS_LINESATROOT// dwStyle
+        ,(WS_VISIBLE | WS_CHILD | WS_BORDER | TVS_FULLROWSELECT | TVS_DISABLEDRAGDROP | TVS_TRACKSELECT | TVS_NOHSCROLL) //| TVS_HASBUTTONS | TVS_HASLINES | TVS_LINESATROOT// dwStyle
         , rc->left, rc->top // x, y
         , rc->right - rc->left, rc->bottom - rc->top // width, height
         , parent // hwndParent
@@ -292,6 +260,7 @@ void CreateNavigationTree(NavigationTree *tree, HWND parent, HINSTANCE hInstance
         , NULL // lpParam
     );
 
+    Alert(L"alert!!!");
     SetWindowSubclass(hwnd_tree, NavigationTree_SubClassProc, 1, NULL);
 
     tree->font = (HFONT)SendMessage(tree->hwnd, WM_GETFONT, NULL, NULL);
@@ -308,7 +277,8 @@ void CreateNavigationTree(NavigationTree *tree, HWND parent, HINSTANCE hInstance
     tree->hwnd = hwnd_tree;
 }
 
-HTREEITEM InsertNavigationItem(NavigationTree *tree, SHFILEINFOW *item, HTREEITEM parent, HTREEITEM prev, NavigationItemData *data)
+HTREEITEM 
+NavigationTree_InsertItem(NavigationTree *tree, SHFILEINFOW *item, HTREEITEM parent, HTREEITEM prev, NavigationItemData *data)
 {
     TVITEMW tvi;
     TVINSERTSTRUCTW tvins;
@@ -332,7 +302,8 @@ HTREEITEM InsertNavigationItem(NavigationTree *tree, SHFILEINFOW *item, HTREEITE
     return hti;
 }
 
-void FillNavigationRootItems(NavigationTree *tree)
+void 
+NavigationTree_FillRoot(NavigationTree *tree)
 {
     HRESULT hr;
     LPITEMIDLIST folder_pidl, item_pidl, abs_pidl;
@@ -366,7 +337,7 @@ void FillNavigationRootItems(NavigationTree *tree)
         NavigationItemData *data = (NavigationItemData*)calloc(1, sizeof(NavigationItemData));
         data->level = 0;
         SHGetPathFromIDListW(abs_pidl, data->path);
-        prev = InsertNavigationItem(tree, &shell_file_info, TVI_ROOT, prev, data);
+        prev = NavigationTree_InsertItem(tree, &shell_file_info, TVI_ROOT, prev, data);
 
         CoTaskMemFree(abs_pidl);
         CoTaskMemFree(item_pidl);
@@ -378,7 +349,8 @@ void FillNavigationRootItems(NavigationTree *tree)
     CoTaskMemFree(folder_pidl);
 }
 
-void FillNavigationTreeItem(NavigationTree *tree, TVITEMW *parent)
+void 
+NavigationTree_FillItem(NavigationTree *tree, TVITEMW *parent)
 {
     HRESULT hr;
     LPITEMIDLIST folder_pidl, item_pidl, abs_pidl;
@@ -416,7 +388,7 @@ void FillNavigationTreeItem(NavigationTree *tree, TVITEMW *parent)
         NavigationItemData *data = (NavigationItemData*)calloc(1, sizeof(NavigationItemData));
         data->level = parent_data->level + 1;
         SHGetPathFromIDListW(abs_pidl, data->path);
-        prev = InsertNavigationItem(tree, &shell_file_info, parent->hItem, TVI_LAST, data);
+        prev = NavigationTree_InsertItem(tree, &shell_file_info, parent->hItem, TVI_LAST, data);
         parent_data->has_items = 1;
 
         CoTaskMemFree(abs_pidl);

@@ -1,30 +1,9 @@
 
-#include <windows.h>
-#include <windowsx.h>           // for WM_COMMAND handling macros
-#include <shlobj.h>             // shell stuff
-#include <shlwapi.h>            // QISearch, easy way to implement QI
-#include <propkey.h>
-#include <propvarutil.h>
-#include <strsafe.h>
-#include <objbase.h>
-
-#pragma comment(lib, "user32")
-#pragma comment(lib, "ole32")
-#pragma comment(lib, "shlwapi")
-#pragma comment(lib, "comctl32")
-#pragma comment(lib, "propsys")
-#pragma comment(lib, "shell32")
-#pragma comment(lib, "Gdi32")
-#pragma comment(lib, "Gdiplus")
-
-#pragma comment(linker,"/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#include "FilePane_Common.h"
 
 #include "MainWindow.cpp"
 #include "NavigationTree.cpp"
 #include "ExplorerBrowserCOM.cpp"
-#include "ShellUtil.cpp"
-
-
 
 void ComputeLayout(HWND hwnd, RECT *rc0, RECT *rc1, RECT *rc2)
 {
@@ -52,6 +31,11 @@ void ComputeLayout(HWND hwnd, RECT *rc0, RECT *rc1, RECT *rc2)
     rc2->right = rc2->left + w;
 }
 
+void ComputeLayout(HWND hwnd, Pane *panes, int pane_count)
+{
+    
+}
+
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 
@@ -61,49 +45,75 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             PostQuitMessage(0);
             break;
         case WM_SIZE:
-            if (_peb1)
+            for (int i = 0; i < g_panes_count; i++)
             {
                 RECT rc,rc0,rc1,rc2;
                 ComputeLayout(hwnd, &rc0, &rc1, &rc2);
-                SetWindowPos(nav_tree.hwnd, NULL, rc0.left, rc0.top, rc0.right - rc0.left, rc0.bottom - rc0.top, NULL);
-                _peb1->SetRect(NULL, rc1);
-                _peb2->SetRect(NULL, rc2);
+                // SetWindowPos(g_nav_tree.hwnd, NULL, rc0.left, rc0.top, rc0.right - rc0.left, rc0.bottom - rc0.top, NULL);
+                // _peb1->SetRect(NULL, rc1);
+                // _peb2->SetRect(NULL, rc2);
             }
-
             break;
         case WM_NOTIFY: {
             LPNMHDR nmhdr = (LPNMHDR)lParam;
-            if (nmhdr->hwndFrom == nav_tree.hwnd)
+            FolderBrowserPane *folder_pane = FilePane_GetFolderBrowserPane();
+            if (folder_pane == NULL) goto DEFWNDPROC;
+            if (nmhdr->hwndFrom == folder_pane->tree->hwnd)
             {
                 switch (nmhdr->code)
                 {
                     case NM_CUSTOMDRAW: {
-                        return NavigationTree_OnCustomDraw(&nav_tree, (LPNMTVCUSTOMDRAW)nmhdr);
+                        return NavigationTree_OnCustomDraw(folder_pane->tree, (LPNMTVCUSTOMDRAW)nmhdr);
                     } break;
-                    case TVN_SELCHANGEDW: {
-                        //LPNMTREEVIEWW pnmtv = (LPNMTREEVIEWW)nmhdr;
-                        //Alert(L"SEL CHANGED: %s", pnmtv->itemNew.lParam);
-                        // LPITEMIDLIST pidl;
-                        // SHParseDisplayName((PCWSTR)pnmtv->itemNew.lParam, NULL, &pidl, NULL, NULL);
-                        // _peb1->BrowseToIDList(pidl, SBSP_ABSOLUTE);
-                        // CoTaskMemFree(pidl);
+                    case NM_KILLFOCUS: {
+                        
+                    } break;
+                    case NM_SETFOCUS: {
 
-                        //TreeView_Expand(pnmtv->hdr.hwndFrom, pnmtv->itemNew.hItem, TVE_TOGGLE);
-                        //SendMessageW(pnmtv->hdr.hwndFrom, TVM_EXPAND, (WPARAM)(TVE_TOGGLE), LPARAM(pnmtv->itemNew.hItem));
                     } break;
-                    // case TVN_ITEMEXPANDINGW: {
-                    //     LPNMTREEVIEW nmtv = (LPNMTREEVIEW)nmhdr;
-                    //     if (nmtv->action == TVE_COLLAPSE)
-                    //         Alert(L"Collapsing");
-                    //     else if (nmtv->action == TVE_EXPAND)
-                    //         Alert(L"Expanding");
-                    // } break;
                 }
             }}
             break;
     }
 
+    DEFWNDPROC:
     return DefWindowProcW(hwnd, msg, wParam, lParam);
+}
+
+Pane* InitContainerPane(HWND hwnd, HINSTANCE hInstance)
+{
+    Pane *pane = &g_panes[0];
+    pane->id = NextId();
+    pane->parent_id = 0;
+    pane->content_type = PaneType::Container;
+    GetClientRect(hwnd, &pane->content.container.rc);
+    pane->content.container.split_direction = SplitDirection::Vertical;
+    pane->content.container.split_type = SplitType::Fixed;
+    pane->content.container.split = 200;
+    return pane;
+}
+
+void InitFolderBrowserPane(HWND hwnd, HINSTANCE hInstance, Pane *parent)
+{
+    NavigationTree *tree = (NavigationTree*)calloc(1, sizeof(NavigationTree));
+    Pane *pane = &g_panes[1];
+    pane->id = NextId();
+    pane->parent_id = parent->id;
+    pane->content_type = PaneType::FolderBrowser;
+    pane->content.folder.tree = tree;
+    parent->content.container.rpane_id = pane->id;
+    RECT rc;
+    rc.left = pane->content.container.rc.left;
+    rc.right = rc.left + (int)pane->content.container.split;
+    rc.top = pane->content.container.rc.top;
+    rc.bottom = pane->content.container.rc.bottom;
+    NavigationTree_Create(tree, hwnd, hInstance, &rc);
+    NavigationTree_FillRoot(tree);
+}
+
+void InitExplorerBrowserPane()
+{
+
 }
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
@@ -117,7 +127,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     // Initialize GDI+.
     Gdiplus::GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
 
-    Scale(points, ARRAYSIZE(points), 10.0/6.0);
+    Scale(g_right_arrow_points, ARRAYSIZE(g_right_arrow_points), 10.0/6.0);
 
     hwnd = CreateMainWindow(hInstance);
 
@@ -132,45 +142,47 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     hr = OleInitialize(NULL);
     if FAILED(hr) return 2;
 
-    hr = CoCreateInstance(CLSID_ExplorerBrowser, NULL, CLSCTX_INPROC, IID_PPV_ARGS(&_peb1));
+    //hr = CoCreateInstance(CLSID_ExplorerBrowser, NULL, CLSCTX_INPROC, IID_PPV_ARGS(&_peb1));
     if FAILED(hr) return 3;
 
-    hr = CoCreateInstance(CLSID_ExplorerBrowser, NULL, CLSCTX_INPROC, IID_PPV_ARGS(&_peb2));
+    //hr = CoCreateInstance(CLSID_ExplorerBrowser, NULL, CLSCTX_INPROC, IID_PPV_ARGS(&_peb2));
     if FAILED(hr) return 3;
 
     RECT rc,rc0,rc1,rc2;
     ComputeLayout(hwnd, &rc0, &rc1, &rc2);
 
     FOLDERSETTINGS fs = {};
-    fs.ViewMode = FVM_DETAILS;
-    fs.fFlags = FWF_NOWEBVIEW;
+    fs.ViewMode = FVM_LIST;// FVM_LIST; // FVM_CONTENT; //FVM_ICON; // FVM_DETAILS;
+    fs.fFlags = FWF_NOWEBVIEW | FWF_NOCOLUMNHEADER;
     //fs.fFlags = FWF_NOWEBVIEW | FWF_NOCOLUMNHEADER;
-    //IUnknown_SetSite(_peb, static_cast<IServiceProvider *>(&service));
+    //IUnknown_SetSite(_peb1, static_cast<IServiceProvider *>(&service));
+    DWORD cookie;
+    //_peb1->Advise(&service, &cookie);
 
-    IShellFolder *pshf;
-    LPITEMIDLIST lpiidl;
-    HTREEITEM tree_item;
+    // IShellFolder *pshf;
+    // LPITEMIDLIST lpiidl;
 
-    CreateNavigationTree(&nav_tree, hwnd, hInstance, &rc0);
-    FillNavigationRootItems(&nav_tree);
+    Pane *primary_pane = InitContainerPane(hwnd, hInstance);
 
-    _peb1->Initialize(hwnd, &rc1, &fs);
-    SHGetDesktopFolder(&pshf);
-    _peb1->BrowseToObject(pshf, NULL);
-    pshf->Release();
+    InitFolderBrowserPane(hwnd, hInstance, primary_pane);
+
+    // _peb1->Initialize(hwnd, &rc1, &fs);
+    // SHGetDesktopFolder(&pshf);
+    // _peb1->BrowseToObject(pshf, NULL);
+    // pshf->Release();
     
-    _peb2->Initialize(hwnd, &rc2, &fs);
-    SHGetSpecialFolderLocation(hwnd, CSIDL_DRIVES, &lpiidl);
-    _peb2->BrowseToIDList(lpiidl, NULL);
-    CoTaskMemFree(lpiidl);
+    // _peb2->Initialize(hwnd, &rc2, &fs);
+    // SHGetSpecialFolderLocation(hwnd, CSIDL_DRIVES, &lpiidl);
+    // _peb2->BrowseToIDList(lpiidl, NULL);
+    // CoTaskMemFree(lpiidl);
 
     ShowWindow(hwnd, nCmdShow);
     UpdateWindow(hwnd);
 
     RunMainWindowLoop();
 
-    _peb1->Release();
-    _peb2->Release();
+    // _peb1->Release();
+    // _peb2->Release();
 
     OleUninitialize();
     CoUninitialize();

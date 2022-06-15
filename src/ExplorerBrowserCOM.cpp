@@ -1,11 +1,5 @@
-#include <shlobj.h>             // shell stuff
-#include <shlwapi.h>            // QISearch, easy way to implement QI
-#include <propkey.h>
-#include <propvarutil.h>
-#include <strsafe.h>
-#include <objbase.h>
 
-
+#include "FilePane_Common.h"
 
 class ExplorerBrowserCOM : public IServiceProvider, public ICommDlgBrowser2, public IExplorerBrowserEvents
 {
@@ -56,7 +50,7 @@ public:
     // ICommDlgBrowser
     IFACEMETHODIMP OnDefaultCommand(IShellView * /* psv */)
     {
-        return S_OK;
+        return E_NOTIMPL;
     }
 
     IFACEMETHODIMP OnStateChange(IShellView * /* psv */, ULONG uChange)
@@ -70,13 +64,13 @@ public:
 
     IFACEMETHODIMP IncludeObject(IShellView * /* psv */, PCUITEMID_CHILD /* pidl */)
     {
-        return S_OK;
+        return E_NOTIMPL;
     }
 
     // ICommDlgBrowser2
     IFACEMETHODIMP Notify(IShellView * /* ppshv */ , DWORD /* dwNotifyType */)
     {
-        return S_OK;
+        return E_NOTIMPL;
     }
 
     IFACEMETHODIMP GetDefaultMenuText(IShellView * /* ppshv */, PWSTR /* pszText */, int /* cchMax */)
@@ -90,7 +84,7 @@ public:
         // ICommDlgBrowser::IncludeObject() for every item when the result
         // set is large.
         *pdwFlags = CDB2GVF_NOINCLUDEITEM;
-        return S_OK;
+        return E_NOTIMPL;
     }
 
     // IExplorerBrowserEvents
@@ -99,12 +93,16 @@ public:
         return E_NOTIMPL;
     }
 
-    IFACEMETHODIMP OnNavigationPending(PCIDLIST_ABSOLUTE /* pidlFolder */)
+    IFACEMETHODIMP OnNavigationPending(PCIDLIST_ABSOLUTE pidlFolder)
     {
+                //WCHAR buffer[1024] = {};
+                //wsprintfW(buffer, L"navigation pending %s", (LPCWSTR)pidlFolder);
+                //SendMessageW(GetParent(NULL), WM_SETTEXT, 0, LPARAM(buffer));
+                //Alert(buffer);
         return S_OK;
     }
 
-    IFACEMETHODIMP OnNavigationComplete(PCIDLIST_ABSOLUTE /* pidlFolder */)
+    IFACEMETHODIMP OnNavigationComplete(PCIDLIST_ABSOLUTE pidlFolder)
     {
         // if (_fPerformRenavigate)
         // {
@@ -112,7 +110,11 @@ public:
         //     _OnSearch();
         //     _fPerformRenavigate = FALSE;
         // }
-        return S_OK;
+                //WCHAR buffer[1024] = {};
+                //wsprintfW(buffer, L"navigation complete %s", (LPCWSTR)pidlFolder);
+                //SendMessageW(GetParent(NULL), WM_SETTEXT, 0, LPARAM(buffer));
+                //Alert(buffer);
+        return E_NOTIMPL;
     }
 
     IFACEMETHODIMP OnNavigationFailed(PCIDLIST_ABSOLUTE /* pidlFolder */)

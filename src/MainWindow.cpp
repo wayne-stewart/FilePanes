@@ -1,6 +1,5 @@
-#include <windows.h>           // for WM_COMMAND handling macros
 
-#include "MainWindow.h"
+#include "FilePane_Common.h"
 
 HWND CreateMainWindow(HINSTANCE hInstance)
 {
