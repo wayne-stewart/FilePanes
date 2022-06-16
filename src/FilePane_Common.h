@@ -68,9 +68,9 @@ enum SplitType {
 };
 
 enum PaneType {
-    Container = 0,
-    FolderBrowser = 1,
-    ExplorerBrowser = 2
+    Container = 1,
+    FolderBrowser = 2,
+    ExplorerBrowser = 3
 };
 
 struct ContainerPane {
@@ -149,13 +149,22 @@ FolderBrowserPane* FilePane_GetFolderBrowserPane() {
     return NULL;
 }
 
-ExplorerBrowserPane* FilePane_GetExplorerPaneById(int id)
+Pane* FilePane_GetPaneById(int id)
 {
     for (int i = 0; i < g_panes_count; i++) {
-        if (g_panes[i].content_type == PaneType::ExplorerBrowser) {
-            return &g_panes[i].content.explorer;
+        Alert(L"LOOP: %d, %d", i, g_panes[i].id);
+        if (g_panes[i].id == id) {
+            return &g_panes[i];
         }
     }
+    return NULL;
+}
+
+ExplorerBrowserPane* FilePane_GetExplorerPaneById(int id)
+{
+    Pane *pane = FilePane_GetPaneById(id);
+    if (pane == NULL) return NULL;
+    if (pane->content_type == PaneType::ExplorerBrowser) return &pane->content.explorer;
     return NULL;
 }
 

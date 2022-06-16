@@ -31,9 +31,55 @@ void ComputeLayout(HWND hwnd, RECT *rc0, RECT *rc1, RECT *rc2)
     rc2->right = rc2->left + w;
 }
 
-void ComputeLayout(HWND hwnd, Pane *panes, int pane_count)
+void ComputeLayout(RECT *rc, Pane *pane)
 {
-    
+    Alert(L"compute layout rc: %d %d %d %d %d %d", rc->left, rc->top, rc->right, rc->bottom, pane->id, pane->content_type);
+    if (pane->content_type == PaneType::Container) {
+        RECT rcl, rcr;
+        pane->content.container.rc = *rc;
+        if (pane->content.container.split_direction == SplitDirection::Horizontal) {
+            if (pane->content.container.split_type == SplitType::Fixed) {
+                //rcl.left = 
+            }
+            else {
+
+            }
+        }
+        else if (pane->content.container.split_direction == SplitDirection::Vertical) {
+            if (pane->content.container.split_type == SplitType::Fixed) {
+                rcl.left = rc->left;
+                rcl.right = (int)pane->content.container.split;
+                rcl.top = rc->top;
+                rcl.bottom = rc->bottom;
+                rcr.left = rcl.right + 5;
+                rcr.right = rc->right;
+                rcr.top = rc->top;
+                rcr.bottom = rc->bottom;
+                Pane *lpane = FilePane_GetPaneById(pane->content.container.lpane_id);
+                Pane *rpane = FilePane_GetPaneById(pane->content.container.rpane_id);
+                Alert(L"lpane: %p, rpane: %p", lpane, rpane);
+                Alert(L"IDs: %d, %d, %d", g_panes[0].id, g_panes[1].id, g_panes[2].id);
+                ComputeLayout(&rcl, lpane);
+                ComputeLayout(&rcr, rpane);
+            }
+            else {
+
+            }
+        }
+    } else if (pane->content_type == PaneType::ExplorerBrowser) {
+        Alert(L"browser rc: %d %d %d %d", rc->left, rc->top, rc->right, rc->bottom);
+        pane->content.explorer.browser->SetRect(NULL, *rc);
+    } else if (pane->content_type == PaneType::FolderBrowser) {
+        Alert(L"folder rc: %d %d %d %d", rc->left, rc->top, rc->right, rc->bottom);
+        SetWindowPos(pane->content.folder.tree->hwnd, NULL, rc->left, rc->top, rc->right - rc->left, rc->bottom - rc->top, NULL);
+    }
+}
+
+void ComputeLayout(HWND hwnd)
+{
+    RECT rc;
+    GetClientRect(hwnd, &rc);
+    ComputeLayout(&rc, g_panes);
 }
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -47,11 +93,13 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
         case WM_SIZE:
             for (int i = 0; i < g_panes_count; i++)
             {
-                RECT rc,rc0,rc1,rc2;
-                ComputeLayout(hwnd, &rc0, &rc1, &rc2);
+                //RECT rc,rc0,rc1,rc2;
+                //ComputeLayout(hwnd, &rc0, &rc1, &rc2);
                 // SetWindowPos(g_nav_tree.hwnd, NULL, rc0.left, rc0.top, rc0.right - rc0.left, rc0.bottom - rc0.top, NULL);
                 // _peb1->SetRect(NULL, rc1);
                 // _peb2->SetRect(NULL, rc2);
+
+                ComputeLayout(hwnd);
             }
             break;
         case WM_NOTIFY: {
@@ -90,6 +138,7 @@ Pane* InitContainerPane(HWND hwnd, HINSTANCE hInstance)
     pane->content.container.split_direction = SplitDirection::Vertical;
     pane->content.container.split_type = SplitType::Fixed;
     pane->content.container.split = 200;
+    g_panes_count++;
     return pane;
 }
 
@@ -101,19 +150,40 @@ void InitFolderBrowserPane(HWND hwnd, HINSTANCE hInstance, Pane *parent)
     pane->parent_id = parent->id;
     pane->content_type = PaneType::FolderBrowser;
     pane->content.folder.tree = tree;
-    parent->content.container.rpane_id = pane->id;
-    RECT rc;
-    rc.left = pane->content.container.rc.left;
-    rc.right = rc.left + (int)pane->content.container.split;
-    rc.top = pane->content.container.rc.top;
-    rc.bottom = pane->content.container.rc.bottom;
+    parent->content.container.lpane_id = pane->id;
+    RECT rc = {};
     NavigationTree_Create(tree, hwnd, hInstance, &rc);
     NavigationTree_FillRoot(tree);
+    g_panes_count++;
+    //Alert(L"InitFolderBrowserPane  done");
 }
 
-void InitExplorerBrowserPane()
+void InitExplorerBrowserPane(HWND hwnd, Pane *parent)
 {
+    HRESULT hr;
+    IExplorerBrowser *browser;
+    hr = CoCreateInstance(CLSID_ExplorerBrowser, NULL, CLSCTX_INPROC, IID_PPV_ARGS(&browser));
+    if FAILED(hr) return;
 
+    FOLDERSETTINGS fs = {};
+    fs.ViewMode = FVM_LIST;// FVM_LIST; // FVM_CONTENT; //FVM_ICON; // FVM_DETAILS;
+    fs.fFlags = FWF_NOWEBVIEW | FWF_NOCOLUMNHEADER;
+
+    IShellFolder *pshf;
+    LPITEMIDLIST lpiidl;
+    RECT rc = {};
+    browser->Initialize(hwnd, &rc, &fs);
+    SHGetDesktopFolder(&pshf);
+    browser->BrowseToObject(pshf, NULL);
+    pshf->Release();
+
+    Pane *pane = &g_panes[2];
+    pane->id = NextId();
+    pane->parent_id = parent->id;
+    pane->content_type = PaneType::ExplorerBrowser;
+    pane->content.explorer.browser = browser;
+    parent->content.container.rpane_id = pane->id;
+    g_panes_count++;
 }
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
@@ -148,8 +218,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     //hr = CoCreateInstance(CLSID_ExplorerBrowser, NULL, CLSCTX_INPROC, IID_PPV_ARGS(&_peb2));
     if FAILED(hr) return 3;
 
-    RECT rc,rc0,rc1,rc2;
-    ComputeLayout(hwnd, &rc0, &rc1, &rc2);
+    //RECT rc,rc0,rc1,rc2;
+    //ComputeLayout(hwnd, &rc0, &rc1, &rc2);
 
     FOLDERSETTINGS fs = {};
     fs.ViewMode = FVM_LIST;// FVM_LIST; // FVM_CONTENT; //FVM_ICON; // FVM_DETAILS;
@@ -165,6 +235,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     Pane *primary_pane = InitContainerPane(hwnd, hInstance);
 
     InitFolderBrowserPane(hwnd, hInstance, primary_pane);
+    InitExplorerBrowserPane(hwnd, primary_pane);
 
     // _peb1->Initialize(hwnd, &rc1, &fs);
     // SHGetDesktopFolder(&pshf);
@@ -175,6 +246,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     // SHGetSpecialFolderLocation(hwnd, CSIDL_DRIVES, &lpiidl);
     // _peb2->BrowseToIDList(lpiidl, NULL);
     // CoTaskMemFree(lpiidl);
+
+    ComputeLayout(hwnd);
 
     ShowWindow(hwnd, nCmdShow);
     UpdateWindow(hwnd);
