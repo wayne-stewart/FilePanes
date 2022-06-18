@@ -99,6 +99,7 @@ union _content {
 struct Pane {
     int id;
     int parent_id;
+    bool deleted;
     PaneType content_type;
     _content content;
 };
@@ -140,6 +141,8 @@ void Alert(LPCWSTR format, ...)
     MessageBoxW(NULL, buffer, L"Alert", MB_OK | MB_ICONEXCLAMATION);
 }
 
+#define ASSERT(test, msg_format, ...) if(!(test)) { Alert(msg_format, __VA_ARGS__); }
+
 FolderBrowserPane* FilePane_GetFolderBrowserPane() {
     for(int i = 0; i < g_panes_count; i++) {
         if (g_panes[i].content_type == PaneType::FolderBrowser) {
@@ -152,12 +155,45 @@ FolderBrowserPane* FilePane_GetFolderBrowserPane() {
 Pane* FilePane_GetPaneById(int id)
 {
     for (int i = 0; i < g_panes_count; i++) {
-        Alert(L"LOOP: %d, %d", i, g_panes[i].id);
+        //Alert(L"LOOP: %d, %d", i, g_panes[i].id);
         if (g_panes[i].id == id) {
             return &g_panes[i];
         }
     }
     return NULL;
+}
+
+Pane* FilePane_AllocatePane()
+{
+    for(int i = 0; i < MAX_PANES; i++) {
+        Pane *pane = &g_panes[i];
+        if (pane->id == 0 || pane->deleted) {
+            memset(pane, 0, sizeof(Pane));
+            pane->id = NextId();
+            g_panes_count++;
+            return pane;
+        }
+    }
+    return NULL;
+}
+
+void FilePane_DeallocatePane(Pane *pane)
+{
+    if (pane == NULL) return;
+    g_panes_count--;
+    pane->deleted = 1;
+    if (pane->content_type == PaneType::ExplorerBrowser) {
+        pane->content.explorer.browser->Release();
+    }
+    else if(pane->content_type == PaneType::FolderBrowser) {
+        CloseHandle(pane->content.folder.tree->hwnd);
+        DeleteObject(pane->content.folder.tree->font);
+        ImageList_Destroy(pane->content.folder.tree->image_list);
+    }
+    else if (pane->content_type == PaneType::Container) {
+        FilePane_DeallocatePane(FilePane_GetPaneById(pane->content.container.lpane_id));
+        FilePane_DeallocatePane(FilePane_GetPaneById(pane->content.container.rpane_id));
+    }
 }
 
 ExplorerBrowserPane* FilePane_GetExplorerPaneById(int id)
@@ -170,6 +206,7 @@ ExplorerBrowserPane* FilePane_GetExplorerPaneById(int id)
 
 ExplorerBrowserPane* FilePane_GetActiveExplorerPane()
 {
+    Alert(L"fix this function before relying on it!");
     return FilePane_GetExplorerPaneById(3);
 }
 

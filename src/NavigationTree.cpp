@@ -251,7 +251,7 @@ NavigationTree_Create(NavigationTree *tree, HWND parent, HINSTANCE hInstance, RE
         NULL // dwExStyle
         , L"SysTreeView32" // lpClassName
         , L"Navigation Tree" //lpWindowName
-        ,(WS_VISIBLE | WS_CHILD | WS_BORDER | TVS_FULLROWSELECT | TVS_DISABLEDRAGDROP | TVS_TRACKSELECT | TVS_NOHSCROLL) //| TVS_HASBUTTONS | TVS_HASLINES | TVS_LINESATROOT// dwStyle
+        ,(WS_VISIBLE | WS_CHILD | TVS_FULLROWSELECT | TVS_DISABLEDRAGDROP | TVS_TRACKSELECT | TVS_NOHSCROLL) //| WS_BORDER | TVS_HASBUTTONS | TVS_HASLINES | TVS_LINESATROOT// dwStyle
         , rc->left, rc->top // x, y
         , rc->right - rc->left, rc->bottom - rc->top // width, height
         , parent // hwndParent
