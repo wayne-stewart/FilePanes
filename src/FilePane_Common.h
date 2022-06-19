@@ -51,6 +51,38 @@ struct NavigationItemData {
     bool expanded;
 };
 
+class ExplorerBrowserEvents : public IServiceProvider, public ICommDlgBrowser2, public IExplorerBrowserEvents
+{
+public:
+
+    // IUnknown
+    IFACEMETHODIMP QueryInterface(REFIID riid, void **ppv);
+    IFACEMETHODIMP_(ULONG) AddRef();
+    IFACEMETHODIMP_(ULONG) Release();
+
+    // IServiceProvider
+    IFACEMETHODIMP QueryService(REFGUID guidService, REFIID riid, void **ppv);
+
+    // ICommDlgBrowser
+    IFACEMETHODIMP OnDefaultCommand(IShellView * /* psv */);
+    IFACEMETHODIMP OnStateChange(IShellView * /* psv */, ULONG uChange);
+    IFACEMETHODIMP IncludeObject(IShellView * /* psv */, PCUITEMID_CHILD /* pidl */);
+
+    // ICommDlgBrowser2
+    IFACEMETHODIMP Notify(IShellView * /* ppshv */ , DWORD /* dwNotifyType */);
+    IFACEMETHODIMP GetDefaultMenuText(IShellView * /* ppshv */, PWSTR /* pszText */, int /* cchMax */);
+    IFACEMETHODIMP GetViewFlags(DWORD *pdwFlags);
+
+    // IExplorerBrowserEvents
+    IFACEMETHODIMP OnViewCreated(IShellView * /* psv */);
+    IFACEMETHODIMP OnNavigationPending(PCIDLIST_ABSOLUTE pidlFolder);
+    IFACEMETHODIMP OnNavigationComplete(PCIDLIST_ABSOLUTE pidlFolder);
+    IFACEMETHODIMP OnNavigationFailed(PCIDLIST_ABSOLUTE /* pidlFolder */);
+private:
+    long _cRef;
+};
+
+
 enum SplitDirection {
     Vertical = 0,
     Horizontal = 1
@@ -85,6 +117,8 @@ struct ContainerPane {
 
 struct ExplorerBrowserPane {
     IExplorerBrowser *browser;
+    ExplorerBrowserEvents *events;
+    DWORD event_cookie;
 };
 
 struct FolderBrowserPane {
@@ -132,17 +166,17 @@ PointF g_right_arrow_points[6] = {
 
 // UTILITY FUNCTIONS
 
-void Alert(LPCWSTR format, ...)
+void Alert(DWORD mb_type, LPCWSTR caption, LPCWSTR format, ...)
 {
     va_list args;
     va_start(args, format);
     WCHAR buffer[1024] = {};
     vswprintf(buffer, format, args);
     va_end(args);
-    MessageBoxW(NULL, buffer, L"Alert", MB_OK | MB_ICONEXCLAMATION);
+    MessageBoxW(NULL, buffer, caption, MB_OK | mb_type);
 }
 
-#define ASSERT(test, msg_format, ...) if(!(test)) { Alert(msg_format, __VA_ARGS__); }
+#define ASSERT(test, msg_format, ...) if(!(test)) { Alert(MB_ICONERROR, L"Assert Error", msg_format, __VA_ARGS__); }
 
 FolderBrowserPane* FilePane_GetFolderBrowserPane() {
     for(int i = 0; i < g_panes_count; i++) {
@@ -207,7 +241,7 @@ ExplorerBrowserPane* FilePane_GetExplorerPaneById(int id)
 
 ExplorerBrowserPane* FilePane_GetActiveExplorerPane()
 {
-    Alert(L"fix this function before relying on it!");
+    ASSERT(false,L"fix this function before relying on it!");
     return FilePane_GetExplorerPaneById(3);
 }
 

@@ -3,7 +3,7 @@
 
 #include "MainWindow.cpp"
 #include "NavigationTree.cpp"
-#include "ExplorerBrowserCOM.cpp"
+#include "ExplorerBrowserEvents.cpp"
 
 void ComputeLayout(HWND hwnd, RECT *rc0, RECT *rc1, RECT *rc2)
 {
@@ -137,7 +137,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             }}
             break;
             case WM_PAINT: {
-
+                DefWindowProcW(hwnd, msg, wParam, lParam);
+                return 0;
             } break;
     }
 
@@ -174,18 +175,20 @@ Pane* InitExplorerBrowserPane(HWND hwnd, Pane *parent)
 {
     ASSERT(parent!=NULL&&parent->content_type==PaneType::Container,L"Explorer Parent must be a container!");
     HRESULT hr;
+
+    // create the com instance for IExplorerBrowser
     IExplorerBrowser *browser;
     hr = CoCreateInstance(CLSID_ExplorerBrowser, NULL, CLSCTX_INPROC, IID_PPV_ARGS(&browser));
     if FAILED(hr) return NULL;
 
+    // initialize the ExplorerBrowser
     FOLDERSETTINGS fs = {};
+    RECT rc = {};
     fs.ViewMode = FVM_LIST;// FVM_LIST; // FVM_CONTENT; //FVM_ICON; // FVM_DETAILS;
     fs.fFlags = FWF_NOWEBVIEW | FWF_NOCOLUMNHEADER;
-
-    IShellFolder *pshf;
-    LPITEMIDLIST lpiidl;
-    RECT rc = {};
     browser->Initialize(hwnd, &rc, &fs);
+
+    // remove border of the browser window
     IServiceProvider *service_provider;
     hr = browser->QueryInterface(IID_IServiceProvider, (void**)&service_provider);
     if SUCCEEDED(hr) {
@@ -200,6 +203,15 @@ Pane* InitExplorerBrowserPane(HWND hwnd, Pane *parent)
             }
         }
     }
+
+    // set event object
+    ExplorerBrowserEvents *browser_events = new ExplorerBrowserEvents();
+    DWORD cookie;
+    hr = browser->Advise(browser_events, &cookie);
+    ASSERT(hr==S_OK, L"could not subscribe to IExplorerBrowser events!");
+
+    // browse to folder location
+    IShellFolder *pshf;
     SHGetDesktopFolder(&pshf);
     browser->BrowseToObject(pshf, NULL);
     pshf->Release();
@@ -208,6 +220,8 @@ Pane* InitExplorerBrowserPane(HWND hwnd, Pane *parent)
     pane->parent_id = parent->id;
     pane->content_type = PaneType::ExplorerBrowser;
     pane->content.explorer.browser = browser;
+    pane->content.explorer.events = browser_events;
+    pane->content.explorer.event_cookie = cookie;
     parent->content.container.rpane_id = pane->id;
     return pane;
 }
@@ -243,7 +257,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 {
     HRESULT hr;
     HWND hwnd;
-    ExplorerBrowserCOM service;
     Gdiplus::GdiplusStartupInput gdiplusStartupInput;
     ULONG_PTR gdiplusToken;
    
