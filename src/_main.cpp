@@ -33,19 +33,14 @@ void ComputeLayout(HWND hwnd, RECT *rc0, RECT *rc1, RECT *rc2)
 
 void ComputeLayout(RECT *rc, Pane *pane)
 {
+    int half_margin = 2;
     //Alert(L"compute layout rc: %d %d %d %d %d %d", rc->left, rc->top, rc->right, rc->bottom, pane->id, pane->content_type);
     if (pane->content_type == PaneType::Container) {
         //Alert(L"%d %d %d %f", pane->id, rc->left, rc->right, pane->content.container.split);
         RECT rcl, rcr;
         pane->content.container.rc = *rc;
-        rcl.left = rc->left;
-        rcl.right = rc->right;
-        rcl.top = rc->top;
-        rcl.bottom = rc->bottom;
-        rcr.left = rc->left;
-        rcr.right = rc->right;
-        rcr.top = rc->top;
-        rcr.bottom = rc->bottom;
+        rcl = *rc;
+        rcr = *rc;
         if (pane->content.container.split_direction == SplitDirection::Horizontal) {
             if (pane->content.container.split_type == SplitType::Fixed) {
                 rcl.bottom = rcl.top + (int)pane->content.container.split;
@@ -72,18 +67,18 @@ void ComputeLayout(RECT *rc, Pane *pane)
     } else if (pane->content_type == PaneType::ExplorerBrowser) {
         //Alert(L"browser rc: %d %d %d %d", rc->left, rc->top, rc->right, rc->bottom);
         RECT rc_;
-        rc_.left = rc->left + 5;
-        rc_.right = rc->right - 5;
-        rc_.top = rc->top + 5;
-        rc_.bottom = rc->bottom -5;
+        rc_.left = rc->left + half_margin;
+        rc_.right = rc->right - half_margin;
+        rc_.top = rc->top + half_margin;
+        rc_.bottom = rc->bottom - half_margin;
         pane->content.explorer.browser->SetRect(NULL, rc_);
     } else if (pane->content_type == PaneType::FolderBrowser) {
         //Alert(L"folder rc: %d %d %d %d", rc->left, rc->top, rc->right, rc->bottom);
         RECT rc_;
-        rc_.left = rc->left + 5;
-        rc_.right = rc->right - 5;
-        rc_.top = rc->top + 5;
-        rc_.bottom = rc->bottom -5;
+        rc_.left = rc->left + half_margin;
+        rc_.right = rc->right - half_margin;
+        rc_.top = rc->top + half_margin;
+        rc_.bottom = rc->bottom - half_margin;
         SetWindowPos(pane->content.folder.tree->hwnd, NULL, rc_.left, rc_.top, rc_.right - rc_.left, rc_.bottom - rc_.top, NULL);
     }
 }
@@ -92,6 +87,10 @@ void ComputeLayout(HWND hwnd)
 {
     RECT rc;
     GetClientRect(hwnd, &rc);
+    rc.bottom -= 2;
+    rc.left += 2;
+    rc.right -= 2;
+    rc.top += 2;
     ComputeLayout(&rc, g_panes);
 }
 
@@ -127,14 +126,19 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
                         return NavigationTree_OnCustomDraw(folder_pane->tree, (LPNMTVCUSTOMDRAW)nmhdr);
                     } break;
                     case NM_KILLFOCUS: {
-                        
+                        folder_pane->tree->focused = false;
+                        InvalidateRect(folder_pane->tree->hwnd, NULL, FALSE);
                     } break;
                     case NM_SETFOCUS: {
-
+                        folder_pane->tree->focused = true;
+                        InvalidateRect(folder_pane->tree->hwnd, NULL, FALSE);
                     } break;
                 }
             }}
             break;
+            case WM_PAINT: {
+
+            } break;
     }
 
     DEFWNDPROC:

@@ -40,6 +40,7 @@ struct NavigationTree
     HWND hwnd;
     HIMAGELIST image_list;
     HFONT font;
+    bool focused;
 };
 
 struct NavigationItemData {

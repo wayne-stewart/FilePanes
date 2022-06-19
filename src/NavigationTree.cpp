@@ -112,7 +112,12 @@ NavigationTree_OnItemPaint(NavigationTree *tree, LPNMTVCUSTOMDRAW nmtvcd)
     bool show_arrow = data->items_checked == 0 || data->has_items;
 
     if (item.state & TVIS_SELECTED) {
-        g.FillRectangle(&bk_selected_brush, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top);
+        if (tree->focused) {
+            g.FillRectangle(&bk_selected_brush, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top);
+        } 
+        else {
+            g.FillRectangle(&bk_inactive_select_brush, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top);
+        }
     }
     else if (hdcfont.GetStyle() & Gdiplus::FontStyleUnderline) {
         g.FillRectangle(&bk_highlight_brush, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top);
