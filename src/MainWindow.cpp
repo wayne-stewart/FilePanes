@@ -23,15 +23,6 @@ HWND CreateMainWindow(HINSTANCE hInstance)
     return hwnd;
 }
 
- void RunMainWindowLoop()
- {
-     MSG msg;
-    while (GetMessage(&msg, NULL, 0, 0)) {
-        TranslateMessage(&msg);
-        DispatchMessage(&msg);
-    }
- }
-
  void RunMainWindowLoopWhileMessagesExist()
  {
     MSG msg;

@@ -51,9 +51,10 @@ struct NavigationItemData {
     bool expanded;
 };
 
-class ExplorerBrowserEvents : public IServiceProvider, public ICommDlgBrowser2, public IExplorerBrowserEvents
+class ExplorerBrowserEvents : public IServiceProvider, public IExplorerBrowserEvents //, public ICommDlgBrowser, public ICommDlgBrowser2
 {
 public:
+    void SetPaneId(int id);
 
     // IUnknown
     IFACEMETHODIMP QueryInterface(REFIID riid, void **ppv);
@@ -63,16 +64,6 @@ public:
     // IServiceProvider
     IFACEMETHODIMP QueryService(REFGUID guidService, REFIID riid, void **ppv);
 
-    // ICommDlgBrowser
-    IFACEMETHODIMP OnDefaultCommand(IShellView * /* psv */);
-    IFACEMETHODIMP OnStateChange(IShellView * /* psv */, ULONG uChange);
-    IFACEMETHODIMP IncludeObject(IShellView * /* psv */, PCUITEMID_CHILD /* pidl */);
-
-    // ICommDlgBrowser2
-    IFACEMETHODIMP Notify(IShellView * /* ppshv */ , DWORD /* dwNotifyType */);
-    IFACEMETHODIMP GetDefaultMenuText(IShellView * /* ppshv */, PWSTR /* pszText */, int /* cchMax */);
-    IFACEMETHODIMP GetViewFlags(DWORD *pdwFlags);
-
     // IExplorerBrowserEvents
     IFACEMETHODIMP OnViewCreated(IShellView * /* psv */);
     IFACEMETHODIMP OnNavigationPending(PCIDLIST_ABSOLUTE pidlFolder);
@@ -80,6 +71,7 @@ public:
     IFACEMETHODIMP OnNavigationFailed(PCIDLIST_ABSOLUTE /* pidlFolder */);
 private:
     long _cRef;
+    int _pane_id;
 };
 
 
@@ -110,7 +102,6 @@ struct ContainerPane {
     SplitDirection split_direction;
     SplitType split_type;
     float split;
-    RECT rc;
     int rpane_id;
     int lpane_id;
 };
@@ -119,6 +110,7 @@ struct ExplorerBrowserPane {
     IExplorerBrowser *browser;
     ExplorerBrowserEvents *events;
     DWORD event_cookie;
+    bool focused;
 };
 
 struct FolderBrowserPane {
@@ -135,6 +127,7 @@ struct Pane {
     int id;
     int parent_id;
     bool deleted;
+    RECT rc;
     PaneType content_type;
     _content content;
 };
@@ -241,8 +234,37 @@ ExplorerBrowserPane* FilePane_GetExplorerPaneById(int id)
 
 ExplorerBrowserPane* FilePane_GetActiveExplorerPane()
 {
-    ASSERT(false,L"fix this function before relying on it!");
-    return FilePane_GetExplorerPaneById(3);
+    // first try to get the currently focused pane
+    for(int i = 0; i < MAX_PANES; i++) {
+        Pane *pane = &g_panes[i];
+        if (pane->content_type==PaneType::ExplorerBrowser && pane->content.explorer.focused)
+        {
+            return &pane->content.explorer;
+        }
+    }
+
+    // if there was none, get the first explorer pane we find
+    for(int i = 0; i < MAX_PANES; i++) {
+        Pane *pane = &g_panes[i];
+        if (pane->content_type==PaneType::ExplorerBrowser)
+        {
+            return &pane->content.explorer;
+        }
+    }
+    return NULL;
+}
+
+void FilePane_SetFocus(int id)
+{
+    for(int i = 0; i < MAX_PANES; i++) {
+        Pane *pane = &g_panes[i];
+        if (pane->id == id) {
+            pane->content.explorer.focused = true;
+        }
+        else if (pane->content_type == PaneType::ExplorerBrowser) {
+            pane->content.explorer.focused = false;
+        }
+    }
 }
 
 #endif

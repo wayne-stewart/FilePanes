@@ -1,6 +1,11 @@
 
 #include "FilePane_Common.h"
 
+void ExplorerBrowserEvents::SetPaneId(int id)
+{
+    _pane_id = id;
+}
+
 IFACEMETHODIMP ExplorerBrowserEvents::QueryInterface(REFIID riid, void **ppv)
 {
     static const QITAB qit[] =
@@ -42,49 +47,38 @@ IFACEMETHODIMP ExplorerBrowserEvents::QueryService(REFGUID guidService, REFIID r
     return hr;
 }
 
-// ICommDlgBrowser
-IFACEMETHODIMP ExplorerBrowserEvents::OnDefaultCommand(IShellView * /* psv */)
-{
-    return E_NOTIMPL;
-}
+// LRESULT 
+// Explorer_SubClassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+// {
+//     switch(msg)
+//     {
+//         case WM_NOTIFY: {
+//             //Alert(MB_OK, L"message", L"notify message");
+//             LPNMHDR hdr = (LPNMHDR)lParam;
+//             switch(hdr->code) {
 
-IFACEMETHODIMP ExplorerBrowserEvents::OnStateChange(IShellView * /* psv */, ULONG uChange)
-{
-    // if (uChange == CDBOSC_SELCHANGE)
-    // {
-    //     _OnSelChange();
-    // }
-    return S_OK;
-}
-
-IFACEMETHODIMP ExplorerBrowserEvents::IncludeObject(IShellView * /* psv */, PCUITEMID_CHILD /* pidl */)
-{
-    return E_NOTIMPL;
-}
-
-// ICommDlgBrowser2
-IFACEMETHODIMP ExplorerBrowserEvents::Notify(IShellView * /* ppshv */ , DWORD /* dwNotifyType */)
-{
-    return E_NOTIMPL;
-}
-
-IFACEMETHODIMP ExplorerBrowserEvents::GetDefaultMenuText(IShellView * /* ppshv */, PWSTR /* pszText */, int /* cchMax */)
-{
-    return E_NOTIMPL;
-}
-
-IFACEMETHODIMP ExplorerBrowserEvents::GetViewFlags(DWORD *pdwFlags)
-{
-    // setting this flag is needed to avoid the poor perf of having
-    // ICommDlgBrowser::IncludeObject() for every item when the result
-    // set is large.
-    *pdwFlags = CDB2GVF_NOINCLUDEITEM;
-    return E_NOTIMPL;
-}
+//             }
+//         } break;
+//         case WM_LBUTTONDOWN: {
+//             Alert(MB_OK, L"message", L"lbuttondown message");
+//         } break;
+//         case WM_LBUTTONUP: {
+//             //Alert(MB_OK, L"message", L"lbuttonup message");
+//         } break;
+//         case WM_MOUSEMOVE: {
+//             //Alert(MB_OK, L"message", L"mouse move");
+//         } break;
+//     }
+//     return DefSubclassProc(hwnd, msg, wParam, lParam);
+// }
 
 // IExplorerBrowserEvents
-IFACEMETHODIMP ExplorerBrowserEvents::OnViewCreated(IShellView * /* psv */)
+IFACEMETHODIMP ExplorerBrowserEvents::OnViewCreated(IShellView *psv)
 {
+    // HWND hwnd;
+    // psv->GetWindow(&hwnd);
+    // ASSERT(SetWindowSubclass(hwnd, Explorer_SubClassProc, 2, NULL), L"did not set subclass");
+    // return S_OK;
     return E_NOTIMPL;
 }
 
@@ -94,6 +88,8 @@ IFACEMETHODIMP ExplorerBrowserEvents::OnNavigationPending(PCIDLIST_ABSOLUTE pidl
             //wsprintfW(buffer, L"navigation pending %s", (LPCWSTR)pidlFolder);
             //SendMessageW(GetParent(NULL), WM_SETTEXT, 0, LPARAM(buffer));
             //Alert(buffer);
+
+    // must return S_OK for navigation to proceed. otherwise navigation is halted.
     return S_OK;
 }
 

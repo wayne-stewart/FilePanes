@@ -5,32 +5,6 @@
 #include "NavigationTree.cpp"
 #include "ExplorerBrowserEvents.cpp"
 
-void ComputeLayout(HWND hwnd, RECT *rc0, RECT *rc1, RECT *rc2)
-{
-    RECT rc;
-    GetClientRect(hwnd, &rc);
-    UINT s = 5;
-    UINT tvw = 250;
-    UINT l = tvw + s * 2;
-    UINT w = (rc.right - (tvw + 4 * s)) / 2;
-    UINT h = (rc.bottom - 10);
-
-    rc0->top = s;
-    rc0->bottom = s + h;
-    rc0->left = s;
-    rc0->right = rc0->left + tvw;
-
-    rc1->top = s;
-    rc1->bottom = s + h;
-    rc1->left = rc0->right + s;
-    rc1->right = rc1->left + w;
-
-    rc2->top = s;
-    rc2->bottom = s + h;
-    rc2->left = rc1->right + s;
-    rc2->right = rc2->left + w;
-}
-
 void ComputeLayout(RECT *rc, Pane *pane)
 {
     int half_margin = 2;
@@ -38,7 +12,7 @@ void ComputeLayout(RECT *rc, Pane *pane)
     if (pane->content_type == PaneType::Container) {
         //Alert(L"%d %d %d %f", pane->id, rc->left, rc->right, pane->content.container.split);
         RECT rcl, rcr;
-        pane->content.container.rc = *rc;
+        pane->rc = *rc;
         rcl = *rc;
         rcr = *rc;
         if (pane->content.container.split_direction == SplitDirection::Horizontal) {
@@ -66,20 +40,19 @@ void ComputeLayout(RECT *rc, Pane *pane)
         ComputeLayout(&rcr, rpane);
     } else if (pane->content_type == PaneType::ExplorerBrowser) {
         //Alert(L"browser rc: %d %d %d %d", rc->left, rc->top, rc->right, rc->bottom);
-        RECT rc_;
-        rc_.left = rc->left + half_margin;
-        rc_.right = rc->right - half_margin;
-        rc_.top = rc->top + half_margin;
-        rc_.bottom = rc->bottom - half_margin;
-        pane->content.explorer.browser->SetRect(NULL, rc_);
+        pane->rc.left = rc->left + half_margin;
+        pane->rc.right = rc->right - half_margin;
+        pane->rc.top = rc->top + half_margin;
+        pane->rc.bottom = rc->bottom - half_margin;
+        pane->content.explorer.browser->SetRect(NULL, pane->rc);
     } else if (pane->content_type == PaneType::FolderBrowser) {
         //Alert(L"folder rc: %d %d %d %d", rc->left, rc->top, rc->right, rc->bottom);
-        RECT rc_;
-        rc_.left = rc->left + half_margin;
-        rc_.right = rc->right - half_margin;
-        rc_.top = rc->top + half_margin;
-        rc_.bottom = rc->bottom - half_margin;
-        SetWindowPos(pane->content.folder.tree->hwnd, NULL, rc_.left, rc_.top, rc_.right - rc_.left, rc_.bottom - rc_.top, NULL);
+        pane->rc.left = rc->left + half_margin;
+        pane->rc.right = rc->right - half_margin;
+        pane->rc.top = rc->top + half_margin;
+        pane->rc.bottom = rc->bottom - half_margin;
+        SetWindowPos(pane->content.folder.tree->hwnd, NULL, 
+            pane->rc.left, pane->rc.top, pane->rc.right - pane->rc.left, pane->rc.bottom - pane->rc.top, NULL);
     }
 }
 
@@ -103,16 +76,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             PostQuitMessage(0);
             break;
         case WM_SIZE:
-            for (int i = 0; i < g_panes_count; i++)
-            {
-                //RECT rc,rc0,rc1,rc2;
-                //ComputeLayout(hwnd, &rc0, &rc1, &rc2);
-                // SetWindowPos(g_nav_tree.hwnd, NULL, rc0.left, rc0.top, rc0.right - rc0.left, rc0.bottom - rc0.top, NULL);
-                // _peb1->SetRect(NULL, rc1);
-                // _peb2->SetRect(NULL, rc2);
-
-                ComputeLayout(hwnd);
-            }
+            ComputeLayout(hwnd);
             break;
         case WM_NOTIFY: {
             LPNMHDR nmhdr = (LPNMHDR)lParam;
@@ -134,12 +98,11 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
                         InvalidateRect(folder_pane->tree->hwnd, NULL, FALSE);
                     } break;
                 }
-            }}
-            break;
-            case WM_PAINT: {
-                DefWindowProcW(hwnd, msg, wParam, lParam);
-                return 0;
-            } break;
+            }} break;
+        case WM_PAINT: {
+            DefWindowProcW(hwnd, msg, wParam, lParam);
+            return 0;
+        } break;
     }
 
     DEFWNDPROC:
@@ -151,7 +114,7 @@ Pane* InitContainerPane(HWND hwnd)
     Pane *pane = FilePane_AllocatePane();
     pane->parent_id = 0;
     pane->content_type = PaneType::Container;
-    GetClientRect(hwnd, &pane->content.container.rc);
+    GetClientRect(hwnd, &pane->rc);
     pane->content.container.split_direction = SplitDirection::Vertical;
     pane->content.container.split_type = SplitType::Fixed;
     pane->content.container.split = 200;
@@ -186,29 +149,31 @@ Pane* InitExplorerBrowserPane(HWND hwnd, Pane *parent)
     RECT rc = {};
     fs.ViewMode = FVM_LIST;// FVM_LIST; // FVM_CONTENT; //FVM_ICON; // FVM_DETAILS;
     fs.fFlags = FWF_NOWEBVIEW | FWF_NOCOLUMNHEADER;
+    browser->SetOptions(EBO_NOBORDER | EBO_NOWRAPPERWINDOW);
     browser->Initialize(hwnd, &rc, &fs);
 
     // remove border of the browser window
-    IServiceProvider *service_provider;
-    hr = browser->QueryInterface(IID_IServiceProvider, (void**)&service_provider);
-    if SUCCEEDED(hr) {
-        IOleWindow *window;
-        hr = service_provider->QueryService(SID_SShellBrowser, IID_IOleWindow, (void**)&window);
-        if SUCCEEDED(hr) {
-            HWND hwnd_browser = NULL;
-            if SUCCEEDED(window->GetWindow(&hwnd_browser)) {
-                LONG style = GetWindowLongW(hwnd_browser, GWL_STYLE);
-                style &= ~WS_BORDER;
-                SetWindowLongW(hwnd_browser, GWL_STYLE, style);
-            }
-        }
-    }
+    // IServiceProvider *service_provider;
+    // IShellBrowser *shell_browser;
+    // HWND hwnd_browser = NULL;
+    // hr = browser->QueryInterface(IID_IServiceProvider, (void**)&service_provider);
+    // ASSERT(SUCCEEDED(hr), L"could not query for IID_IServiceProvider");
+    // hr = service_provider->QueryService(SID_SShellBrowser, IID_IShellBrowser, (void**)&shell_browser);
+    // ASSERT(SUCCEEDED(hr), L"could not query for IID_IShellBrowser");
+    // hr = shell_browser->GetWindow(&hwnd_browser);
+    // ASSERT(SUCCEEDED(hr),L"could not get explorer hwnd");
+    //ASSERT(SetWindowSubclass(hwnd_browser, Explorer_SubClassProc, 2, NULL), L"did not set subclass");
+    //LONG style = GetWindowLongW(hwnd_browser, GWL_STYLE);
+    //style &= ~WS_BORDER;
+    //SetWindowLongW(hwnd_browser, GWL_STYLE, style);
+    //shell_browser->SetMenuSB()
 
     // set event object
     ExplorerBrowserEvents *browser_events = new ExplorerBrowserEvents();
     DWORD cookie;
     hr = browser->Advise(browser_events, &cookie);
     ASSERT(hr==S_OK, L"could not subscribe to IExplorerBrowser events!");
+
 
     // browse to folder location
     IShellFolder *pshf;
@@ -223,6 +188,7 @@ Pane* InitExplorerBrowserPane(HWND hwnd, Pane *parent)
     pane->content.explorer.events = browser_events;
     pane->content.explorer.event_cookie = cookie;
     parent->content.container.rpane_id = pane->id;
+    browser_events->SetPaneId(pane->id);
     return pane;
 }
 
@@ -288,7 +254,25 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     ShowWindow(hwnd, nCmdShow);
     UpdateWindow(hwnd);
 
-    RunMainWindowLoop();
+    MSG msg;
+    while (GetMessage(&msg, NULL, 0, 0)) {
+        TranslateMessage(&msg);
+        if (msg.message == WM_LBUTTONDOWN)
+        {
+            POINTS pts = MAKEPOINTS(msg.lParam);
+            POINT pt = {};
+            POINTSTOPOINT(pt, pts);
+            ClientToScreen(msg.hwnd, &pt);
+            ScreenToClient(hwnd, &pt);
+            for(int i = 0; i < g_panes_count; i++) {
+                if (g_panes[i].content_type == PaneType::ExplorerBrowser && PtInRect(&g_panes[i].rc, pt)) {
+                    FilePane_SetFocus(g_panes[i].id);
+                    break;
+                }
+            }
+        }
+        DispatchMessage(&msg);
+    }
 
     OleUninitialize();
     CoUninitialize();

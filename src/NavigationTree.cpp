@@ -112,7 +112,7 @@ NavigationTree_OnItemPaint(NavigationTree *tree, LPNMTVCUSTOMDRAW nmtvcd)
     bool show_arrow = data->items_checked == 0 || data->has_items;
 
     if (item.state & TVIS_SELECTED) {
-        if (tree->focused) {
+        if (tree->focused || (hdcfont.GetStyle() & Gdiplus::FontStyleUnderline)) {
             g.FillRectangle(&bk_selected_brush, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top);
         } 
         else {
