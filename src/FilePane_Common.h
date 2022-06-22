@@ -182,7 +182,7 @@ FolderBrowserPane* FilePane_GetFolderBrowserPane() {
 
 Pane* FilePane_GetPaneById(int id)
 {
-    for (int i = 0; i < g_panes_count; i++) {
+    for (int i = 0; i < MAX_PANES; i++) {
         //Alert(L"LOOP: %d, %d", i, g_panes[i].id);
         if (g_panes[i].id == id) {
             return &g_panes[i];
@@ -232,14 +232,14 @@ ExplorerBrowserPane* FilePane_GetExplorerPaneById(int id)
     return NULL;
 }
 
-ExplorerBrowserPane* FilePane_GetActiveExplorerPane()
+Pane* FilePane_GetActiveExplorerPane()
 {
     // first try to get the currently focused pane
     for(int i = 0; i < MAX_PANES; i++) {
         Pane *pane = &g_panes[i];
         if (pane->content_type==PaneType::ExplorerBrowser && pane->content.explorer.focused)
         {
-            return &pane->content.explorer;
+            return pane;
         }
     }
 
@@ -248,7 +248,7 @@ ExplorerBrowserPane* FilePane_GetActiveExplorerPane()
         Pane *pane = &g_panes[i];
         if (pane->content_type==PaneType::ExplorerBrowser)
         {
-            return &pane->content.explorer;
+            return pane;
         }
     }
     return NULL;
@@ -263,6 +263,32 @@ void FilePane_SetFocus(int id)
         }
         else if (pane->content_type == PaneType::ExplorerBrowser) {
             pane->content.explorer.focused = false;
+        }
+    }
+}
+
+Pane* FilePane_GetExplorerPaneByPt(POINT pt)
+{
+    for(int i = 0; i < MAX_PANES; i++) {
+        if (g_panes[i].content_type == PaneType::ExplorerBrowser && PtInRect(&g_panes[i].rc, pt)) {
+            return &g_panes[i];
+        }
+    }
+    return NULL;
+}
+
+/*
+    Run the function on all explorer browser panes.
+    If the function returns true, it returns early.
+*/
+void FilePane_ForAllExplorerPanes(bool (*const fn)(Pane*))
+{
+    for (int i = 0; i < MAX_PANES; i++) {
+        Pane *pane = &g_panes[i];
+        if (pane->content_type == PaneType::ExplorerBrowser) {
+            if (fn(pane)) {
+                return;
+            }
         }
     }
 }

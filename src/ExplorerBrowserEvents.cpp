@@ -11,8 +11,8 @@ IFACEMETHODIMP ExplorerBrowserEvents::QueryInterface(REFIID riid, void **ppv)
     static const QITAB qit[] =
     {
         QITABENT(ExplorerBrowserEvents, IServiceProvider),
-        QITABENT(ExplorerBrowserEvents, ICommDlgBrowser),
-        QITABENT(ExplorerBrowserEvents, ICommDlgBrowser2),
+        //QITABENT(ExplorerBrowserEvents, ICommDlgBrowser),
+        //QITABENT(ExplorerBrowserEvents, ICommDlgBrowser2),
         QITABENT(ExplorerBrowserEvents, IExplorerBrowserEvents),
         { 0 },
     };

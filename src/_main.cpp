@@ -67,6 +67,31 @@ void ComputeLayout(HWND hwnd)
     ComputeLayout(&rc, g_panes);
 }
 
+void ComputeFocusFrame(Pane *pane, RECT *left, RECT *top, RECT *right, RECT *bottom)
+{
+    int margin = 4;
+    
+    left->left = pane->rc.left - margin;
+    left->top = pane->rc.top - margin;
+    left->right = pane->rc.left;
+    left->bottom = pane->rc.bottom + margin;
+
+    top->left = pane->rc.left - margin;
+    top->top = pane->rc.top - margin;
+    top->right = pane->rc.right + margin;
+    top->bottom = pane->rc.top;
+
+    right->left = pane->rc.right;
+    right->top = pane->rc.top - margin;
+    right->right = pane->rc.right + margin;
+    right->bottom = pane->rc.bottom + margin;
+
+    bottom->left = pane->rc.left - margin;
+    bottom->top = pane->rc.bottom;
+    bottom->right = pane->rc.right + margin;
+    bottom->bottom = pane->rc.bottom + margin;
+}
+
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 
@@ -100,6 +125,20 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 }
             }} break;
         case WM_PAINT: {
+            PAINTSTRUCT ps;
+            HDC hdc = BeginPaint(hwnd, &ps);
+            Pane *pane = FilePane_GetActiveExplorerPane();
+            if (pane != NULL) {
+                HBRUSH brush = CreateSolidBrush(RGB(50,50,50));
+                RECT left, top, right, bottom;
+                ComputeFocusFrame(pane, &left, &top, &right, &bottom);
+                FillRect(hdc, &left, brush);
+                FillRect(hdc, &top, brush);
+                FillRect(hdc, &right, brush);
+                FillRect(hdc, &bottom, brush);
+                DeleteObject(brush);
+            }
+            EndPaint(hwnd, &ps);
             DefWindowProcW(hwnd, msg, wParam, lParam);
             return 0;
         } break;
@@ -264,12 +303,22 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
             POINTSTOPOINT(pt, pts);
             ClientToScreen(msg.hwnd, &pt);
             ScreenToClient(hwnd, &pt);
-            for(int i = 0; i < g_panes_count; i++) {
-                if (g_panes[i].content_type == PaneType::ExplorerBrowser && PtInRect(&g_panes[i].rc, pt)) {
-                    FilePane_SetFocus(g_panes[i].id);
-                    break;
+            // for(int i = 0; i < MAX_PANES; i++) {
+            //     if (g_panes[i].content_type == PaneType::ExplorerBrowser && PtInRect(&g_panes[i].rc, pt)) {
+            //         FilePane_SetFocus(g_panes[i].id);
+            //         InvalidateRect(hwnd, NULL, TRUE);
+            //         break;
+            //     }
+            // }
+
+            FilePane_ForAllExplorerPanes([&, pt](Pane* pane) { 
+                if (PtInRect(&pane->rc, pt)) {
+                    FilePane_SetFocus(pane->id);
+                    InvalidateRect(hwnd, NULL, TRUE);
+                    return true;
                 }
-            }
+                return false;
+            });
         }
         DispatchMessage(&msg);
     }

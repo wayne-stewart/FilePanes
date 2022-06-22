@@ -202,7 +202,7 @@ NavigationTree_SubClassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, U
             WCHAR buffer[260] = {};
             if (NavigationTree_HitTest(hwnd, pts, &item, buffer, ARRAYSIZE(buffer)))
             {
-                ExplorerBrowserPane *explorer_pane = FilePane_GetActiveExplorerPane();
+                Pane *explorer_pane = FilePane_GetActiveExplorerPane();
                 NavigationItemData *data = (NavigationItemData*)item.lParam;
                 int chevron_start = data->level * 15;
                 int chevron_end = chevron_start + 15;
@@ -226,13 +226,13 @@ NavigationTree_SubClassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, U
                         }
                         else
                         {
-                            SetExplorerBrowserPath(data->path, explorer_pane->browser);
+                            SetExplorerBrowserPath(data->path, explorer_pane->content.explorer.browser);
                         }
                     }
                 }
                 else
                 {
-                    SetExplorerBrowserPath(data->path, explorer_pane->browser);
+                    SetExplorerBrowserPath(data->path, explorer_pane->content.explorer.browser);
                 }
                 // prevent default behavior by returning  here
                 //return 1;
