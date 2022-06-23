@@ -93,6 +93,7 @@ enum SplitType {
 };
 
 enum PaneType {
+    NotSet = 0,
     Container = 1,
     FolderBrowser = 2,
     ExplorerBrowser = 3
@@ -126,7 +127,6 @@ union _content {
 struct Pane {
     int id;
     int parent_id;
-    bool deleted;
     RECT rc;
     PaneType content_type;
     _content content;
@@ -171,6 +171,11 @@ void Alert(DWORD mb_type, LPCWSTR caption, LPCWSTR format, ...)
 
 #define ASSERT(test, msg_format, ...) if(!(test)) { Alert(MB_ICONERROR, L"Assert Error", msg_format, __VA_ARGS__); }
 
+#define BEGIN_ENUM_EXPLORERS for(int i = 0; i < MAX_PANES; i++) { \
+    Pane *pane = &g_panes[i]; \
+    if (pane->content_type == PaneType::ExplorerBrowser) {
+#define END_ENUM_EXPLORERS }}
+
 FolderBrowserPane* FilePane_GetFolderBrowserPane() {
     for(int i = 0; i < g_panes_count; i++) {
         if (g_panes[i].content_type == PaneType::FolderBrowser) {
@@ -183,9 +188,9 @@ FolderBrowserPane* FilePane_GetFolderBrowserPane() {
 Pane* FilePane_GetPaneById(int id)
 {
     for (int i = 0; i < MAX_PANES; i++) {
-        //Alert(L"LOOP: %d, %d", i, g_panes[i].id);
-        if (g_panes[i].id == id) {
-            return &g_panes[i];
+        Pane *pane = &g_panes[i];
+        if (pane->content_type != PaneType::NotSet && pane->id == id) {
+            return pane;
         }
     }
     return NULL;
@@ -195,7 +200,7 @@ Pane* FilePane_AllocatePane()
 {
     for(int i = 0; i < MAX_PANES; i++) {
         Pane *pane = &g_panes[i];
-        if (pane->id == 0 || pane->deleted) {
+        if (pane->content_type == PaneType::NotSet) {
             memset(pane, 0, sizeof(Pane));
             pane->id = NextId();
             g_panes_count++;
@@ -208,8 +213,6 @@ Pane* FilePane_AllocatePane()
 void FilePane_DeallocatePane(Pane *pane)
 {
     if (pane == NULL) return;
-    g_panes_count--;
-    pane->deleted = 1;
     if (pane->content_type == PaneType::ExplorerBrowser) {
         pane->content.explorer.browser->Release();
     }
@@ -222,6 +225,8 @@ void FilePane_DeallocatePane(Pane *pane)
         FilePane_DeallocatePane(FilePane_GetPaneById(pane->content.container.lpane_id));
         FilePane_DeallocatePane(FilePane_GetPaneById(pane->content.container.rpane_id));
     }
+    g_panes_count--;
+    memset(pane, 0, sizeof(Pane));
 }
 
 ExplorerBrowserPane* FilePane_GetExplorerPaneById(int id)
@@ -235,62 +240,36 @@ ExplorerBrowserPane* FilePane_GetExplorerPaneById(int id)
 Pane* FilePane_GetActiveExplorerPane()
 {
     // first try to get the currently focused pane
-    for(int i = 0; i < MAX_PANES; i++) {
-        Pane *pane = &g_panes[i];
-        if (pane->content_type==PaneType::ExplorerBrowser && pane->content.explorer.focused)
-        {
-            return pane;
-        }
-    }
+    BEGIN_ENUM_EXPLORERS
+    if (pane->content.explorer.focused) return pane;
+    END_ENUM_EXPLORERS
 
     // if there was none, get the first explorer pane we find
-    for(int i = 0; i < MAX_PANES; i++) {
-        Pane *pane = &g_panes[i];
-        if (pane->content_type==PaneType::ExplorerBrowser)
-        {
-            return pane;
-        }
-    }
+    BEGIN_ENUM_EXPLORERS
+    return pane;
+    END_ENUM_EXPLORERS
+
     return NULL;
 }
 
 void FilePane_SetFocus(int id)
 {
-    for(int i = 0; i < MAX_PANES; i++) {
-        Pane *pane = &g_panes[i];
-        if (pane->id == id) {
-            pane->content.explorer.focused = true;
-        }
-        else if (pane->content_type == PaneType::ExplorerBrowser) {
-            pane->content.explorer.focused = false;
-        }
+    BEGIN_ENUM_EXPLORERS
+    if (pane->id == id) {
+        pane->content.explorer.focused = true;
     }
+    else {
+        pane->content.explorer.focused = false;
+    }
+    END_ENUM_EXPLORERS
 }
 
 Pane* FilePane_GetExplorerPaneByPt(POINT pt)
 {
-    for(int i = 0; i < MAX_PANES; i++) {
-        if (g_panes[i].content_type == PaneType::ExplorerBrowser && PtInRect(&g_panes[i].rc, pt)) {
-            return &g_panes[i];
-        }
-    }
+    BEGIN_ENUM_EXPLORERS
+    if (PtInRect(&pane->rc, pt)) return pane;
+    END_ENUM_EXPLORERS
     return NULL;
-}
-
-/*
-    Run the function on all explorer browser panes.
-    If the function returns true, it returns early.
-*/
-void FilePane_ForAllExplorerPanes(bool (*const fn)(Pane*))
-{
-    for (int i = 0; i < MAX_PANES; i++) {
-        Pane *pane = &g_panes[i];
-        if (pane->content_type == PaneType::ExplorerBrowser) {
-            if (fn(pane)) {
-                return;
-            }
-        }
-    }
 }
 
 #endif
