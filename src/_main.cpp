@@ -136,8 +136,8 @@ Pane* InitExplorerBrowserPane(HWND hwnd, Pane *parent)
     // initialize the ExplorerBrowser
     FOLDERSETTINGS fs = {};
     RECT rc = {};
-    fs.ViewMode = FVM_LIST;// FVM_LIST; // FVM_CONTENT; //FVM_ICON; // FVM_DETAILS;
-    fs.fFlags = FWF_NOWEBVIEW | FWF_NOCOLUMNHEADER;
+    fs.ViewMode = FVM_DETAILS;// FVM_LIST; // FVM_CONTENT; //FVM_ICON; // FVM_DETAILS;
+    fs.fFlags = FWF_NOWEBVIEW; // | FWF_NOCOLUMNHEADER;
     browser->SetOptions(EBO_NOBORDER | EBO_NOWRAPPERWINDOW);
     browser->Initialize(hwnd, &rc, &fs);
 
@@ -208,9 +208,54 @@ void SplitPane(HWND hwnd, Pane *explorer_pane, SplitType split_type, SplitDirect
     InitExplorerBrowserPane(hwnd, container_pane);
 }
 
+POINT GetPoint(HWND hwnd, MSG *msg)
+{
+    POINTS pts = MAKEPOINTS(msg->lParam);
+    POINT pt = {};
+    POINTSTOPOINT(pt, pts);
+    ClientToScreen(msg->hwnd, &pt);
+    ScreenToClient(hwnd, &pt);
+    return pt;
+}
+
+/*
+    PreDispatchMessage allows this program to respond to
+    messages that are destined for hosted windows
+*/
+void PreDispatchMessage(HWND hwnd, MSG *msg)
+{
+    if (msg->message == WM_LBUTTONDOWN)
+    {
+        POINT pt = GetPoint(hwnd, msg);
+        Pane *pane = FilePane_GetExplorerPaneByPt(pt);
+        if (pane != NULL && !pane->content.explorer.focused) {
+            FilePane_SetFocus(pane->id);
+            InvalidateRect(hwnd, NULL, FALSE);
+        }
+    }
+    else if(msg->message == WM_XBUTTONDOWN)
+    {
+        POINT pt = GetPoint(hwnd, msg);
+        UINT button = GET_XBUTTON_WPARAM(msg->wParam);
+        Pane *pane = FilePane_GetExplorerPaneByPt(pt);
+        if (pane != NULL) {
+            if (button == XBUTTON1) { // back
+                pane->content.explorer.browser->BrowseToIDList(NULL, SBSP_NAVIGATEBACK);
+            }
+            else if (button == XBUTTON2) { // forward
+                pane->content.explorer.browser->BrowseToIDList(NULL, SBSP_NAVIGATEFORWARD);
+            }
+            //IFolderView *ppv;
+            //pane->content.explorer.browser->BrowseToObject
+            // if (SUCCEEDED(pane->content.explorer.browser->GetCurrentView(IID_IFolderView, (void**)&ppv))) {
+                
+            // }
+        }
+    }
+}
+
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-
     switch(msg)
     {
         case WM_DESTROY:
@@ -245,7 +290,6 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             HDC hdc = BeginPaint(hwnd, &ps);
             HBRUSH active_brush = CreateSolidBrush(RGB(200,200,200));
             HBRUSH inactive_brush = CreateSolidBrush(RGB(240,240,240));
-            HBRUSH brush;
             Pane *active_pane = NULL;
             BEGIN_ENUM_EXPLORERS
                 if (pane->content.explorer.focused) {
@@ -261,8 +305,6 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             DeleteObject(active_brush);
             DeleteObject(inactive_brush);
             EndPaint(hwnd, &ps);
-            DefWindowProcW(hwnd, msg, wParam, lParam);
-            return 0;
         } break;
     }
 
@@ -308,19 +350,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     MSG msg;
     while (GetMessage(&msg, NULL, 0, 0)) {
         TranslateMessage(&msg);
-        if (msg.message == WM_LBUTTONDOWN)
-        {
-            POINTS pts = MAKEPOINTS(msg.lParam);
-            POINT pt = {};
-            POINTSTOPOINT(pt, pts);
-            ClientToScreen(msg.hwnd, &pt);
-            ScreenToClient(hwnd, &pt);
-            Pane *pane = FilePane_GetExplorerPaneByPt(pt);
-            if (pane != NULL) {
-                FilePane_SetFocus(pane->id);
-                InvalidateRect(hwnd, NULL, FALSE);
-            }
-        }
+        PreDispatchMessage(hwnd, &msg);
         DispatchMessage(&msg);
     }
 
@@ -331,6 +361,4 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
     return 0;
 }
-
-
 
