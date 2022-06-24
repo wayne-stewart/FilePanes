@@ -101,10 +101,15 @@ IFACEMETHODIMP ExplorerBrowserEvents::OnNavigationComplete(PCIDLIST_ABSOLUTE pid
     //     _OnSearch();
     //     _fPerformRenavigate = FALSE;
     // }
-            //WCHAR buffer[1024] = {};
+            //
             //wsprintfW(buffer, L"navigation complete %s", (LPCWSTR)pidlFolder);
             //SendMessageW(GetParent(NULL), WM_SETTEXT, 0, LPARAM(buffer));
             //Alert(buffer);
+    
+    WCHAR buffer[1024] = {};
+    SHGetPathFromIDListW(pidlFolder, buffer);
+    ExplorerBrowserPane *pane = FilePane_GetExplorerPaneById(_pane_id);
+    SetWindowTextW(pane->txt_uri, buffer);
     return E_NOTIMPL;
 }
 

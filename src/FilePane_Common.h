@@ -2,6 +2,8 @@
 #ifndef __GLOBALSTATE__H__
 #define __GLOBALSTATE__H__
 
+#define UNICODE 1
+
 #include <windows.h>
 #include <windowsx.h>           // for WM_COMMAND handling macros
 #include <shlobj.h>             // shell stuff
@@ -112,6 +114,7 @@ struct ExplorerBrowserPane {
     ExplorerBrowserEvents *events;
     DWORD event_cookie;
     bool focused;
+    HWND txt_uri;
 };
 
 struct FolderBrowserPane {
@@ -214,7 +217,8 @@ void FilePane_DeallocatePane(Pane *pane)
 {
     if (pane == NULL) return;
     if (pane->content_type == PaneType::ExplorerBrowser) {
-        pane->content.explorer.browser->Release();
+        pane->content.explorer.browser->Destroy();
+        DestroyWindow(pane->content.explorer.txt_uri);
     }
     else if(pane->content_type == PaneType::FolderBrowser) {
         CloseHandle(pane->content.folder.tree->hwnd);

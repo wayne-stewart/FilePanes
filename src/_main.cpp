@@ -44,7 +44,19 @@ void ComputeLayout(RECT *rc, Pane *pane)
         pane->rc.right = rc->right - half_margin;
         pane->rc.top = rc->top + half_margin;
         pane->rc.bottom = rc->bottom - half_margin;
-        pane->content.explorer.browser->SetRect(NULL, pane->rc);
+        
+        RECT pos;
+        pos.left = pane->rc.left;
+        pos.top = pane->rc.top;
+        pos.right = pane->rc.right;
+        pos.bottom = pane->rc.top + 30;
+        SetWindowPos(pane->content.explorer.txt_uri, NULL,
+            pos.left, pos.top, pos.right - pos.left, pos.bottom - pos.top, NULL);
+        //Edit_SetRect(pane->content.explorer.txt_uri, &pos);
+        
+        pos.top = pos.bottom;
+        pos.bottom = pane->rc.bottom;
+        pane->content.explorer.browser->SetRect(NULL, pos);
     } else if (pane->content_type == PaneType::FolderBrowser) {
         //Alert(L"folder rc: %d %d %d %d", rc->left, rc->top, rc->right, rc->bottom);
         pane->rc.left = rc->left + half_margin;
@@ -123,7 +135,7 @@ void InitFolderBrowserPane(HWND hwnd, HINSTANCE hInstance, Pane *parent)
     NavigationTree_FillRoot(tree);
 }
 
-Pane* InitExplorerBrowserPane(HWND hwnd, Pane *parent)
+Pane* InitExplorerBrowserPane(HWND hwnd, HINSTANCE hInstance, Pane *parent)
 {
     ASSERT(parent!=NULL&&parent->content_type==PaneType::Container,L"Explorer Parent must be a container!");
     HRESULT hr;
@@ -141,35 +153,13 @@ Pane* InitExplorerBrowserPane(HWND hwnd, Pane *parent)
     browser->SetOptions(EBO_NOBORDER | EBO_NOWRAPPERWINDOW);
     browser->Initialize(hwnd, &rc, &fs);
 
-    // remove border of the browser window
-    // IServiceProvider *service_provider;
-    // IShellBrowser *shell_browser;
-    // HWND hwnd_browser = NULL;
-    // hr = browser->QueryInterface(IID_IServiceProvider, (void**)&service_provider);
-    // ASSERT(SUCCEEDED(hr), L"could not query for IID_IServiceProvider");
-    // hr = service_provider->QueryService(SID_SShellBrowser, IID_IShellBrowser, (void**)&shell_browser);
-    // ASSERT(SUCCEEDED(hr), L"could not query for IID_IShellBrowser");
-    // hr = shell_browser->GetWindow(&hwnd_browser);
-    // ASSERT(SUCCEEDED(hr),L"could not get explorer hwnd");
-    //ASSERT(SetWindowSubclass(hwnd_browser, Explorer_SubClassProc, 2, NULL), L"did not set subclass");
-    //LONG style = GetWindowLongW(hwnd_browser, GWL_STYLE);
-    //style &= ~WS_BORDER;
-    //SetWindowLongW(hwnd_browser, GWL_STYLE, style);
-    //shell_browser->SetMenuSB()
-
-    // set event object
+    // subscribe to events from the explorer window
     ExplorerBrowserEvents *browser_events = new ExplorerBrowserEvents();
     DWORD cookie;
     hr = browser->Advise(browser_events, &cookie);
     ASSERT(hr==S_OK, L"could not subscribe to IExplorerBrowser events!");
 
-
-    // browse to folder location
-    IShellFolder *pshf;
-    SHGetDesktopFolder(&pshf);
-    browser->BrowseToObject(pshf, NULL);
-    pshf->Release();
-
+    // create the Pane
     Pane *pane = FilePane_AllocatePane();
     pane->parent_id = parent->id;
     pane->content_type = PaneType::ExplorerBrowser;
@@ -178,10 +168,31 @@ Pane* InitExplorerBrowserPane(HWND hwnd, Pane *parent)
     pane->content.explorer.event_cookie = cookie;
     parent->content.container.rpane_id = pane->id;
     browser_events->SetPaneId(pane->id);
+
+    // create he address text box
+    pane->content.explorer.txt_uri = CreateWindowExW(
+          0  // dwExStyle
+        , L"EDIT" // class name
+        , NULL // window name
+        , WS_VISIBLE | WS_CHILD | ES_LEFT | ES_AUTOHSCROLL // dwStyle
+        , 0, 0, 0, 0 // x y w h
+        , hwnd // parent
+        , NULL // hmenu
+        , hInstance // GetWindowLongPtr(hwnd, GWLP_HINSTANCE)
+        , NULL // lpParam
+    );
+    SetWindowFont(pane->content.explorer.txt_uri, GetWindowFont(hwnd), NULL);
+
+    // browse to folder location
+    IShellFolder *pshf;
+    SHGetDesktopFolder(&pshf);
+    browser->BrowseToObject(pshf, NULL);
+    pshf->Release();
+
     return pane;
 }
 
-void SplitPane(HWND hwnd, Pane *explorer_pane, SplitType split_type, SplitDirection split_direction, float split_value)
+void SplitPane(HWND hwnd, HINSTANCE hInstance, Pane *explorer_pane, SplitType split_type, SplitDirection split_direction, float split_value)
 {
     ASSERT(explorer_pane!=NULL&&explorer_pane->content_type==PaneType::ExplorerBrowser, L"Only split explorer panes!");
 
@@ -205,7 +216,7 @@ void SplitPane(HWND hwnd, Pane *explorer_pane, SplitType split_type, SplitDirect
         parent_container_pane->content.container.rpane_id = container_pane->id;
     }
 
-    InitExplorerBrowserPane(hwnd, container_pane);
+    InitExplorerBrowserPane(hwnd, hInstance, container_pane);
 }
 
 POINT GetPoint(HWND hwnd, MSG *msg)
@@ -316,8 +327,12 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 {
     HRESULT hr;
     HWND hwnd;
+    MSG msg;
     Gdiplus::GdiplusStartupInput gdiplusStartupInput;
     ULONG_PTR gdiplusToken;
+
+    // ensure the dll for common controls is loaded
+    InitCommonControls();
    
     // Initialize GDI+.
     Gdiplus::GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
@@ -326,34 +341,34 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
     hwnd = CreateMainWindow(hInstance);
 
-    // ensure the dll for common controls is loaded
-    InitCommonControls();
-
+    // required for all COM calls later
     hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
     if FAILED(hr) return 1;
 
+    // enabled drag and drop between explorer windows
     hr = OleInitialize(NULL);
     if FAILED(hr) return 2;
 
     Pane *primary_pane = InitContainerPane(hwnd);
     InitFolderBrowserPane(hwnd, hInstance, primary_pane);
-    Pane *ex1 = InitExplorerBrowserPane(hwnd, primary_pane);
-    SplitPane(hwnd, ex1, SplitType::Float, SplitDirection::Vertical, 0.5);
+    Pane *ex1 = InitExplorerBrowserPane(hwnd, hInstance, primary_pane);
+    SplitPane(hwnd, hInstance, ex1, SplitType::Float, SplitDirection::Vertical, 0.5);
     Pane *ex2 = FilePane_GetPaneById(5);
-    SplitPane(hwnd, ex2, SplitType::Float, SplitDirection::Horizontal, 0.5);
+    SplitPane(hwnd, hInstance, ex2, SplitType::Float, SplitDirection::Horizontal, 0.5);
 
     ComputeLayout(hwnd);
 
     ShowWindow(hwnd, nCmdShow);
     UpdateWindow(hwnd);
 
-    MSG msg;
+    // main message loop
     while (GetMessage(&msg, NULL, 0, 0)) {
         TranslateMessage(&msg);
         PreDispatchMessage(hwnd, &msg);
         DispatchMessage(&msg);
     }
 
+    // cleanup
     OleUninitialize();
     CoUninitialize();
     Gdiplus::GdiplusShutdown(gdiplusToken);
