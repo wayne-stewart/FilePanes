@@ -265,7 +265,7 @@ NavigationTree_Create(NavigationTree *tree, HWND parent, HINSTANCE hInstance, RE
         , NULL // lpParam
     );
 
-    SetWindowSubclass(hwnd_tree, NavigationTree_SubClassProc, 1, NULL);
+    SetWindowSubclass(hwnd_tree, NavigationTree_SubClassProc, FPC_NAVIGATION_TREE, NULL);
 
     tree->font = (HFONT)SendMessage(tree->hwnd, WM_GETFONT, NULL, NULL);
     

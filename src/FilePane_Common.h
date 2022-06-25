@@ -37,6 +37,9 @@ using PointF = Gdiplus::PointF;
 using Font = Gdiplus::Font;
 using RectF = Gdiplus::RectF;
 
+#define FPC_NAVIGATION_TREE 1
+#define FPC_SINGLE_LINE_EDIT 2
+
 struct NavigationTree
 {
     HWND hwnd;

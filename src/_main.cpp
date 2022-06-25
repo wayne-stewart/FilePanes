@@ -52,7 +52,9 @@ void ComputeLayout(RECT *rc, Pane *pane)
         pos.bottom = pane->rc.top + 30;
         SetWindowPos(pane->content.explorer.txt_uri, NULL,
             pos.left, pos.top, pos.right - pos.left, pos.bottom - pos.top, NULL);
-        //Edit_SetRect(pane->content.explorer.txt_uri, &pos);
+        RECT offset = pos;
+        OffsetRect(&offset, -pos.left + 2, -pos.top + 5);
+        Edit_SetRect(pane->content.explorer.txt_uri, &offset);
         
         pos.top = pos.bottom;
         pos.bottom = pane->rc.bottom;
@@ -135,6 +137,31 @@ void InitFolderBrowserPane(HWND hwnd, HINSTANCE hInstance, Pane *parent)
     NavigationTree_FillRoot(tree);
 }
 
+LRESULT 
+SingleLineEdit_SubClassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+{
+    HANDLE handle;
+    switch(msg)
+    {
+        case WM_CHAR: {
+            if (wParam == VK_RETURN) {
+                return 0;
+            }
+        } break;
+        case WM_PASTE: {
+            DefSubclassProc(hwnd, msg, wParam, lParam);
+            WCHAR buffer[1024] = {};
+            Edit_GetLine(hwnd, 0, buffer, ARRAYSIZE(buffer));
+            Edit_SetText(hwnd, buffer);
+            return 0;
+        } break;
+        case WM_DESTROY: {
+            RemoveWindowSubclass(hwnd, SingleLineEdit_SubClassProc, FPC_SINGLE_LINE_EDIT);
+        } break;
+    }
+    return DefSubclassProc(hwnd, msg, wParam, lParam);
+}
+
 Pane* InitExplorerBrowserPane(HWND hwnd, HINSTANCE hInstance, Pane *parent)
 {
     ASSERT(parent!=NULL&&parent->content_type==PaneType::Container,L"Explorer Parent must be a container!");
@@ -172,16 +199,17 @@ Pane* InitExplorerBrowserPane(HWND hwnd, HINSTANCE hInstance, Pane *parent)
     // create he address text box
     pane->content.explorer.txt_uri = CreateWindowExW(
           0  // dwExStyle
-        , L"EDIT" // class name
+        , WC_EDITW // class name
         , NULL // window name
-        , WS_VISIBLE | WS_CHILD | ES_LEFT | ES_AUTOHSCROLL // dwStyle
+        , WS_VISIBLE | WS_CHILD | ES_LEFT | ES_AUTOHSCROLL | ES_MULTILINE // dwStyle
         , 0, 0, 0, 0 // x y w h
         , hwnd // parent
         , NULL // hmenu
         , hInstance // GetWindowLongPtr(hwnd, GWLP_HINSTANCE)
         , NULL // lpParam
     );
-    SetWindowFont(pane->content.explorer.txt_uri, GetWindowFont(hwnd), NULL);
+    SetWindowFont(pane->content.explorer.txt_uri, GetWindowFont(FilePane_GetFolderBrowserPane()->tree->hwnd), NULL);
+    SetWindowSubclass(pane->content.explorer.txt_uri, SingleLineEdit_SubClassProc, FPC_SINGLE_LINE_EDIT, NULL);
 
     // browse to folder location
     IShellFolder *pshf;
