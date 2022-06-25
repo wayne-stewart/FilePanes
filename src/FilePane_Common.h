@@ -40,7 +40,7 @@ using RectF = Gdiplus::RectF;
 #define FPC_NAVIGATION_TREE 1
 #define FPC_SINGLE_LINE_EDIT 2
 
-struct NavigationTree
+struct FolderBrowserTree
 {
     HWND hwnd;
     HIMAGELIST image_list;
@@ -48,7 +48,7 @@ struct NavigationTree
     bool focused;
 };
 
-struct NavigationItemData {
+struct FolderItemData {
     WCHAR path[MAX_PATH];
     int level;
     bool items_checked;
@@ -121,7 +121,7 @@ struct ExplorerBrowserPane {
 };
 
 struct FolderBrowserPane {
-    NavigationTree *tree;
+    FolderBrowserTree *tree;
 };
 
 union _content {
@@ -142,8 +142,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 HWND CreateMainWindow(HINSTANCE hInstance);
 void RunMainWindowLoop();
 void RunMainWindowLoopWhileMessagesExist();
-void NavigationTree_OnItemPaint(NavigationTree *tree, LPNMTVCUSTOMDRAW nmtvcd);
-void NavigationTree_FillItem(NavigationTree *tree, TVITEMW *parent);
+void FolderBrowser_OnItemPaint(FolderBrowserTree *tree, LPNMTVCUSTOMDRAW nmtvcd);
+void FolderBrowser_FillItem(FolderBrowserTree *tree, TVITEMW *parent);
 
 /// GLOBAL STATE
 

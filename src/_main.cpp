@@ -2,7 +2,7 @@
 #include "FilePane_Common.h"
 
 #include "MainWindow.cpp"
-#include "NavigationTree.cpp"
+#include "FolderBrowser.cpp"
 #include "ExplorerBrowserEvents.cpp"
 
 void ComputeLayout(RECT *rc, Pane *pane)
@@ -126,15 +126,15 @@ Pane* InitContainerPane(HWND hwnd)
 
 void InitFolderBrowserPane(HWND hwnd, HINSTANCE hInstance, Pane *parent)
 {
-    NavigationTree *tree = (NavigationTree*)calloc(1, sizeof(NavigationTree));
+    FolderBrowserTree *tree = (FolderBrowserTree*)calloc(1, sizeof(FolderBrowserTree));
     Pane *pane = FilePane_AllocatePane();
     pane->parent_id = parent->id;
     pane->content_type = PaneType::FolderBrowser;
     pane->content.folder.tree = tree;
     parent->content.container.lpane_id = pane->id;
     RECT rc = {};
-    NavigationTree_Create(tree, hwnd, hInstance, &rc);
-    NavigationTree_FillRoot(tree);
+    FolderBrowser_Create(tree, hwnd, hInstance, &rc);
+    FolderBrowser_FillRoot(tree);
 }
 
 LRESULT 
@@ -312,7 +312,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 switch (nmhdr->code)
                 {
                     case NM_CUSTOMDRAW: {
-                        return NavigationTree_OnCustomDraw(folder_pane->tree, (LPNMTVCUSTOMDRAW)nmhdr);
+                        return FolderBrowser_OnCustomDraw(folder_pane->tree, (LPNMTVCUSTOMDRAW)nmhdr);
                     } break;
                     case NM_KILLFOCUS: {
                         folder_pane->tree->focused = false;

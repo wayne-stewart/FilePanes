@@ -50,7 +50,7 @@ void Translate(PointF *points, int count, float x, float y)
 }
 
 LRESULT 
-NavigationTree_OnCustomDraw(NavigationTree *tree, LPNMTVCUSTOMDRAW pnmtvcd)
+FolderBrowser_OnCustomDraw(FolderBrowserTree *tree, LPNMTVCUSTOMDRAW pnmtvcd)
 {
     switch (pnmtvcd->nmcd.dwDrawStage)
     {
@@ -63,7 +63,7 @@ NavigationTree_OnCustomDraw(NavigationTree *tree, LPNMTVCUSTOMDRAW pnmtvcd)
         // before tree view items are painted to customize default painting
         // return CDRF_NOTIFYPOSTPAINT to get the message when default painting is done.
         case CDDS_ITEMPREPAINT:
-            NavigationTree_OnItemPaint(tree, pnmtvcd);
+            FolderBrowser_OnItemPaint(tree, pnmtvcd);
             return CDRF_SKIPDEFAULT;
             break;
 
@@ -76,7 +76,7 @@ NavigationTree_OnCustomDraw(NavigationTree *tree, LPNMTVCUSTOMDRAW pnmtvcd)
 }
 
 void 
-NavigationTree_OnItemPaint(NavigationTree *tree, LPNMTVCUSTOMDRAW nmtvcd)
+FolderBrowser_OnItemPaint(FolderBrowserTree *tree, LPNMTVCUSTOMDRAW nmtvcd)
 {
     RECT rc = nmtvcd->nmcd.rc;
     // not sure what these 0 height items are, but we don't need to draw them.
@@ -107,7 +107,7 @@ NavigationTree_OnItemPaint(NavigationTree *tree, LPNMTVCUSTOMDRAW nmtvcd)
 
     //Alert(L"%d %d", item.state, item.stateMask);
 
-    NavigationItemData *data = (NavigationItemData*)item.lParam;
+    FolderItemData *data = (FolderItemData*)item.lParam;
     int indent = data->level * 15;
     bool show_arrow = data->items_checked == 0 || data->has_items;
 
@@ -153,7 +153,7 @@ NavigationTree_OnItemPaint(NavigationTree *tree, LPNMTVCUSTOMDRAW nmtvcd)
 }
 
 BOOL 
-NavigationTree_HitTest(HWND hwnd, POINTS pts, TVITEMW *item, LPWSTR buffer, int buffer_size)
+FolderBrowser_HitTest(HWND hwnd, POINTS pts, TVITEMW *item, LPWSTR buffer, int buffer_size)
 {
     TVHITTESTINFO hit_test;
     POINTSTOPOINT(hit_test.pt, pts);
@@ -171,7 +171,7 @@ NavigationTree_HitTest(HWND hwnd, POINTS pts, TVITEMW *item, LPWSTR buffer, int 
 }
 
 LRESULT 
-NavigationTree_SubClassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+FolderBrowser_SubClassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
 {
     switch(msg)
     {
@@ -180,7 +180,7 @@ NavigationTree_SubClassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, U
             // TVITEMW item;
             // WCHAR item_buffer[260] = {};
             // WCHAR buffer[128] = {};
-            // if (NavigationTree_HitTest(hwnd, pts, &item, item_buffer, ARRAYSIZE(item_buffer)))
+            // if (FolderBrowser_HitTest(hwnd, pts, &item, item_buffer, ARRAYSIZE(item_buffer)))
             // {
             //     wsprintfW(buffer, L"%d, %d, %s", pts.x, pts.y, item.pszText);
             //     SendMessageW(GetParent(hwnd), WM_SETTEXT, 0, LPARAM(buffer));
@@ -200,10 +200,10 @@ NavigationTree_SubClassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, U
             POINTS pts = MAKEPOINTS(lParam);
             TVITEMW item;
             WCHAR buffer[260] = {};
-            if (NavigationTree_HitTest(hwnd, pts, &item, buffer, ARRAYSIZE(buffer)))
+            if (FolderBrowser_HitTest(hwnd, pts, &item, buffer, ARRAYSIZE(buffer)))
             {
                 Pane *explorer_pane = FilePane_GetActiveExplorerPane();
-                NavigationItemData *data = (NavigationItemData*)item.lParam;
+                FolderItemData *data = (FolderItemData*)item.lParam;
                 int chevron_start = data->level * 15;
                 int chevron_end = chevron_start + 15;
                 if ((pts.x > chevron_start && pts.x < chevron_end) // first check for the arrow position
@@ -218,7 +218,7 @@ NavigationTree_SubClassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, U
                     else
                     {
                         FolderBrowserPane *folder_pane = FilePane_GetFolderBrowserPane();
-                        NavigationTree_FillItem(folder_pane->tree, &item);
+                        FolderBrowser_FillItem(folder_pane->tree, &item);
                         if (data->has_items)
                         {
                             TreeView_Expand(hwnd, item.hItem, TVE_EXPAND);
@@ -247,7 +247,7 @@ NavigationTree_SubClassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, U
 }
 
 void 
-NavigationTree_Create(NavigationTree *tree, HWND parent, HINSTANCE hInstance, RECT *rc)
+FolderBrowser_Create(FolderBrowserTree *tree, HWND parent, HINSTANCE hInstance, RECT *rc)
 {
     RECT rcClient;
 
@@ -265,7 +265,7 @@ NavigationTree_Create(NavigationTree *tree, HWND parent, HINSTANCE hInstance, RE
         , NULL // lpParam
     );
 
-    SetWindowSubclass(hwnd_tree, NavigationTree_SubClassProc, FPC_NAVIGATION_TREE, NULL);
+    SetWindowSubclass(hwnd_tree, FolderBrowser_SubClassProc, FPC_NAVIGATION_TREE, NULL);
 
     tree->font = (HFONT)SendMessage(tree->hwnd, WM_GETFONT, NULL, NULL);
     
@@ -282,7 +282,7 @@ NavigationTree_Create(NavigationTree *tree, HWND parent, HINSTANCE hInstance, RE
 }
 
 HTREEITEM 
-NavigationTree_InsertItem(NavigationTree *tree, SHFILEINFOW *item, HTREEITEM parent, HTREEITEM prev, NavigationItemData *data)
+FolderBrowser_InsertItem(FolderBrowserTree *tree, SHFILEINFOW *item, HTREEITEM parent, HTREEITEM prev, FolderItemData *data)
 {
     TVITEMW tvi;
     TVINSERTSTRUCTW tvins;
@@ -307,7 +307,7 @@ NavigationTree_InsertItem(NavigationTree *tree, SHFILEINFOW *item, HTREEITEM par
 }
 
 void 
-NavigationTree_FillRoot(NavigationTree *tree)
+FolderBrowser_FillRoot(FolderBrowserTree *tree)
 {
     HRESULT hr;
     LPITEMIDLIST folder_pidl, item_pidl, abs_pidl;
@@ -338,10 +338,10 @@ NavigationTree_FillRoot(NavigationTree *tree)
             ,sizeof(SHFILEINFOW)
             ,SHGFI_PIDL|SHGFI_DISPLAYNAME|SHGFI_ATTRIBUTES|SHGFI_SYSICONINDEX|SHGFI_ICON); //  | SHGFI_LARGEICON
 
-        NavigationItemData *data = (NavigationItemData*)calloc(1, sizeof(NavigationItemData));
+        FolderItemData *data = (FolderItemData*)calloc(1, sizeof(FolderItemData));
         data->level = 0;
         SHGetPathFromIDListW(abs_pidl, data->path);
-        prev = NavigationTree_InsertItem(tree, &shell_file_info, TVI_ROOT, prev, data);
+        prev = FolderBrowser_InsertItem(tree, &shell_file_info, TVI_ROOT, prev, data);
 
         CoTaskMemFree(abs_pidl);
         CoTaskMemFree(item_pidl);
@@ -354,7 +354,7 @@ NavigationTree_FillRoot(NavigationTree *tree)
 }
 
 void 
-NavigationTree_FillItem(NavigationTree *tree, TVITEMW *parent)
+FolderBrowser_FillItem(FolderBrowserTree *tree, TVITEMW *parent)
 {
     HRESULT hr;
     LPITEMIDLIST folder_pidl, item_pidl, abs_pidl;
@@ -362,7 +362,7 @@ NavigationTree_FillItem(NavigationTree *tree, TVITEMW *parent)
     IShellFolder *drives_shell_folder;
     IEnumIDList *enum_id_list;
     SHFILEINFOW shell_file_info;
-    NavigationItemData *parent_data = (NavigationItemData*)parent->lParam;
+    FolderItemData *parent_data = (FolderItemData*)parent->lParam;
     HTREEITEM prev = parent->hItem;
     if (parent_data->items_checked) return;
     parent_data->items_checked = 1;
@@ -389,10 +389,10 @@ NavigationTree_FillItem(NavigationTree *tree, TVITEMW *parent)
             ,sizeof(SHFILEINFOW)
             ,SHGFI_PIDL|SHGFI_DISPLAYNAME|SHGFI_ATTRIBUTES|SHGFI_SYSICONINDEX|SHGFI_ICON); //  | SHGFI_LARGEICON
 
-        NavigationItemData *data = (NavigationItemData*)calloc(1, sizeof(NavigationItemData));
+        FolderItemData *data = (FolderItemData*)calloc(1, sizeof(FolderItemData));
         data->level = parent_data->level + 1;
         SHGetPathFromIDListW(abs_pidl, data->path);
-        prev = NavigationTree_InsertItem(tree, &shell_file_info, parent->hItem, TVI_LAST, data);
+        prev = FolderBrowser_InsertItem(tree, &shell_file_info, parent->hItem, TVI_LAST, data);
         parent_data->has_items = 1;
 
         CoTaskMemFree(abs_pidl);
