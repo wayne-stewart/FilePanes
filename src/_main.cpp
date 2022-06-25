@@ -3,7 +3,7 @@
 
 #include "MainWindow.cpp"
 #include "FolderBrowser.cpp"
-#include "ExplorerBrowserEvents.cpp"
+#include "ExplorerBrowser.cpp"
 
 void ComputeLayout(RECT *rc, Pane *pane)
 {
