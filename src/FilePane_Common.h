@@ -212,6 +212,17 @@ void Alert(DWORD mb_type, LPCWSTR caption, LPCWSTR format, ...)
     (rc).top = (rc).top + (v); \
     (rc).bottom = (rc).bottom - (v); }
 
+inline
+void FilePane_SetSplitHandleCursor(Pane *pane)
+{
+    if (pane->content.container.split_direction == SplitDirection::Horizontal) {
+        SetCursor(g_idc_sizens);
+    }
+    else if (pane->content.container.split_direction == SplitDirection::Vertical) {
+        SetCursor(g_idc_sizewe);
+    }
+}
+
 Pane* FilePane_GetFolderBrowserPane() {
     for(int i = 0; i < MAX_PANES; i++) {
         if (g_panes[i].content_type == PaneType::FolderBrowser) {

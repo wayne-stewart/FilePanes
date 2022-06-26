@@ -267,6 +267,7 @@ int PreDispatch_OnLButtonDown(HWND hwnd, MSG *msg)
 
     BEGIN_ENUM_CONTAINERS
         if (PtInRect(&pane->content.container.split_handle, pt)) {
+            FilePane_SetSplitHandleCursor(pane);
             g_dragging_split_handle = true;
             g_dragged_split_handle_pane_id = pane->id;
             //Alert(MB_OK, L"In Rect", L"id %d", pane->id);
@@ -336,12 +337,7 @@ int PreDispatch_OnMouseMove(HWND hwnd, MSG *msg)
     else {
         BEGIN_ENUM_CONTAINERS
             if (PtInRect(&pane->content.container.split_handle, pt)) {
-                if (pane->content.container.split_direction == SplitDirection::Horizontal) {
-                    SetCursor(g_idc_sizens);
-                }
-                else if (pane->content.container.split_direction == SplitDirection::Vertical) {
-                    SetCursor(g_idc_sizewe);
-                }
+                FilePane_SetSplitHandleCursor(pane);
                 break;
             }
         END_ENUM_CONTAINERS
@@ -408,6 +404,9 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             break;
         case WM_SIZE:
             ComputeLayout(hwnd);
+            break;
+        case WM_SETCURSOR:
+            if (g_dragging_split_handle) return 1;
             break;
         case WM_NOTIFY: {
             LPNMHDR nmhdr = (LPNMHDR)lParam;

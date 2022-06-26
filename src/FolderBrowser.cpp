@@ -175,6 +175,9 @@ FolderBrowser_SubClassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UI
 {
     switch(msg)
     {
+        case WM_ERASEBKGND: {
+            if (g_dragging_split_handle) return 0;
+        } break;
         case WM_MOUSEMOVE: {
             // POINTS pts = MAKEPOINTS(lParam);
             // TVITEMW item;
