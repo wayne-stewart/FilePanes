@@ -7,7 +7,6 @@
 
 void ComputeLayout(RECT *rc, Pane *pane)
 {
-    int half_margin = 3;
     //Alert(L"compute layout rc: %d %d %d %d %d %d", rc->left, rc->top, rc->right, rc->bottom, pane->id, pane->content_type);
     if (pane->content_type == PaneType::Container) {
         //Alert(L"%d %d %d %f", pane->id, rc->left, rc->right, pane->content.container.split);
@@ -24,8 +23,8 @@ void ComputeLayout(RECT *rc, Pane *pane)
                 rcl.bottom = rcl.top + (int)(pane->content.container.split * (rc->bottom - rc->top));
             }
             rcr.top = rcl.bottom;
-            split_handle->top = rcl.bottom - half_margin;
-            split_handle->bottom = split_handle->top + (half_margin * 2);
+            split_handle->top = rcl.bottom - HALF_FRAME_WIDTH;
+            split_handle->bottom = split_handle->top + FRAME_WIDTH;
             split_handle->left = rcl.left;
             split_handle->right = rcl.right;
         }
@@ -37,8 +36,8 @@ void ComputeLayout(RECT *rc, Pane *pane)
                 rcl.right = rcl.left + (int)(pane->content.container.split * (rc->right - rc->left));
             }
             rcr.left = rcl.right;
-            split_handle->left = rcl.right - half_margin;
-            split_handle->right = split_handle->left + (half_margin * 2);
+            split_handle->left = rcl.right - HALF_FRAME_WIDTH;
+            split_handle->right = split_handle->left + FRAME_WIDTH;
             split_handle->top = rcl.top;
             split_handle->bottom = rcl.bottom;
             //Alert(MB_OK, L"alert", L"%d %d %d %d", split_handle->left, split_handle->top, split_handle->right, split_handle->bottom);
@@ -50,10 +49,10 @@ void ComputeLayout(RECT *rc, Pane *pane)
         ComputeLayout(&rcr, rpane);
     } else if (pane->content_type == PaneType::ExplorerBrowser) {
         //Alert(L"browser rc: %d %d %d %d", rc->left, rc->top, rc->right, rc->bottom);
-        pane->rc.left = rc->left + half_margin;
-        pane->rc.right = rc->right - half_margin;
-        pane->rc.top = rc->top + half_margin;
-        pane->rc.bottom = rc->bottom - half_margin;
+        pane->rc.left = rc->left + HALF_FRAME_WIDTH;
+        pane->rc.right = rc->right - HALF_FRAME_WIDTH;
+        pane->rc.top = rc->top + HALF_FRAME_WIDTH;
+        pane->rc.bottom = rc->bottom - HALF_FRAME_WIDTH;
         
         RECT pos;
         pos.left = pane->rc.left;
@@ -71,10 +70,10 @@ void ComputeLayout(RECT *rc, Pane *pane)
         pane->content.explorer.browser->SetRect(NULL, pos);
     } else if (pane->content_type == PaneType::FolderBrowser) {
         //Alert(L"folder rc: %d %d %d %d", rc->left, rc->top, rc->right, rc->bottom);
-        pane->rc.left = rc->left + half_margin;
-        pane->rc.right = rc->right - half_margin;
-        pane->rc.top = rc->top + half_margin;
-        pane->rc.bottom = rc->bottom - half_margin;
+        pane->rc.left = rc->left + HALF_FRAME_WIDTH;
+        pane->rc.right = rc->right - HALF_FRAME_WIDTH;
+        pane->rc.top = rc->top + HALF_FRAME_WIDTH;
+        pane->rc.bottom = rc->bottom - HALF_FRAME_WIDTH;
         SetWindowPos(pane->content.folder.tree->hwnd, NULL, 
             pane->rc.left, pane->rc.top, pane->rc.right - pane->rc.left, pane->rc.bottom - pane->rc.top, NULL);
     }
@@ -84,37 +83,36 @@ void ComputeLayout(HWND hwnd)
 {
     RECT rc;
     GetClientRect(hwnd, &rc);
-    rc.bottom -= 2;
-    rc.left += 2;
-    rc.right -= 2;
-    rc.top += 2;
+    rc.bottom -= HALF_FRAME_WIDTH;
+    rc.left += HALF_FRAME_WIDTH;
+    rc.right -= HALF_FRAME_WIDTH;
+    rc.top += HALF_FRAME_WIDTH;
     ComputeLayout(&rc, g_panes);
 }
 
 void DrawExplorerFrame(Pane *pane, HDC hdc, HBRUSH brush)
 {
     RECT left, top, right, bottom;
-    int margin = 4;
     
-    left.left = pane->rc.left - margin;
-    left.top = pane->rc.top - margin;
+    left.left = pane->rc.left - FRAME_WIDTH;
+    left.top = pane->rc.top - FRAME_WIDTH;
     left.right = pane->rc.left;
-    left.bottom = pane->rc.bottom + margin;
+    left.bottom = pane->rc.bottom + FRAME_WIDTH;
 
-    top.left = pane->rc.left - margin;
-    top.top = pane->rc.top - margin;
-    top.right = pane->rc.right + margin;
+    top.left = pane->rc.left - FRAME_WIDTH;
+    top.top = pane->rc.top - FRAME_WIDTH;
+    top.right = pane->rc.right + FRAME_WIDTH;
     top.bottom = pane->rc.top;
 
     right.left = pane->rc.right;
-    right.top = pane->rc.top - margin;
-    right.right = pane->rc.right + margin;
-    right.bottom = pane->rc.bottom + margin;
+    right.top = pane->rc.top - FRAME_WIDTH;
+    right.right = pane->rc.right + FRAME_WIDTH;
+    right.bottom = pane->rc.bottom + FRAME_WIDTH;
 
-    bottom.left = pane->rc.left - margin;
+    bottom.left = pane->rc.left - FRAME_WIDTH;
     bottom.top = pane->rc.bottom;
-    bottom.right = pane->rc.right + margin;
-    bottom.bottom = pane->rc.bottom + margin;
+    bottom.right = pane->rc.right + FRAME_WIDTH;
+    bottom.bottom = pane->rc.bottom + FRAME_WIDTH;
 
     FillRect(hdc, &left, brush);
     FillRect(hdc, &top, brush);
@@ -222,7 +220,7 @@ Pane* InitExplorerBrowserPane(HWND hwnd, HINSTANCE hInstance, Pane *parent)
         , hInstance // GetWindowLongPtr(hwnd, GWLP_HINSTANCE)
         , NULL // lpParam
     );
-    SetWindowFont(pane->content.explorer.txt_uri, GetWindowFont(FilePane_GetFolderBrowserPane()->tree->hwnd), NULL);
+    SetWindowFont(pane->content.explorer.txt_uri, GetWindowFont(FilePane_GetFolderBrowserPane()->content.folder.tree->hwnd), NULL);
     SetWindowSubclass(pane->content.explorer.txt_uri, SingleLineEdit_SubClassProc, FPC_SINGLE_LINE_EDIT, NULL);
 
     // browse to folder location
@@ -271,7 +269,7 @@ POINT GetPoint(HWND hwnd, MSG *msg)
     return pt;
 }
 
-void PreDispatch_OnLButtonDown(HWND hwnd, MSG *msg)
+int PreDispatch_OnLButtonDown(HWND hwnd, MSG *msg)
 {
     POINT pt = GetPoint(hwnd, msg);
 
@@ -280,6 +278,7 @@ void PreDispatch_OnLButtonDown(HWND hwnd, MSG *msg)
             g_dragging_split_handle = true;
             g_dragged_split_handle_pane_id = pane->id;
             //Alert(MB_OK, L"In Rect", L"id %d", pane->id);
+            return 0;
             break;
         }
     END_ENUM_CONTAINERS
@@ -289,8 +288,10 @@ void PreDispatch_OnLButtonDown(HWND hwnd, MSG *msg)
         if (pane != NULL && !pane->content.explorer.focused) {
             FilePane_SetFocus(pane->id);
             InvalidateRect(hwnd, NULL, FALSE);
+            //UpdateWindow(hwnd);
         }
     }
+    return 1;
 }
 
 void PreDispatch_OnLButtonUp(HWND hwnd, MSG *msg)
@@ -298,7 +299,7 @@ void PreDispatch_OnLButtonUp(HWND hwnd, MSG *msg)
     if (g_dragging_split_handle) g_dragging_split_handle = false;
 }
 
-void PreDispatch_OnMouseMove(HWND hwnd, MSG *msg)
+int PreDispatch_OnMouseMove(HWND hwnd, MSG *msg)
 {
     POINT pt = GetPoint(hwnd, msg);
 
@@ -329,9 +330,16 @@ void PreDispatch_OnMouseMove(HWND hwnd, MSG *msg)
                 //Alert(MB_OK, L"move", L"split %f", pane->content.container.split);
             }
         }
+        
+        SendMessageW(hwnd, WM_SETREDRAW, FALSE, 0);
         b_block_wm_paint = true;
         ComputeLayout(&rc, pane);
         b_block_wm_paint = false;
+        SendMessageW(hwnd, WM_SETREDRAW, TRUE, 0);
+        EXPAND_BY_HALF_FRAME_WIDTH(rc)
+        RedrawWindow(hwnd, &rc, NULL, RDW_FRAME | RDW_NOERASE | RDW_INVALIDATE | RDW_ALLCHILDREN);
+        UpdateWindow(hwnd);
+        return 0;
     }
     else {
         BEGIN_ENUM_CONTAINERS
@@ -346,6 +354,7 @@ void PreDispatch_OnMouseMove(HWND hwnd, MSG *msg)
             }
         END_ENUM_CONTAINERS
     }
+    return 1;
 }
 
 void PreDispatch_OnXButtonDown(HWND hwnd, MSG *msg)
@@ -368,12 +377,12 @@ void PreDispatch_OnXButtonDown(HWND hwnd, MSG *msg)
     }
 }
 
-/*
-    PreDispatchMessage allows this program to respond to
-    messages that are destined for hosted windows
-*/
 int PreDispatchMessage(HWND hwnd, MSG *msg)
 {
+    /*
+        PreDispatchMessage allows this program to respond to
+        messages that are destined for hosted windows
+    */
     switch(msg->message)
     {
         case WM_ERASEBKGND:
@@ -383,13 +392,13 @@ int PreDispatchMessage(HWND hwnd, MSG *msg)
             if (b_block_wm_paint) return 0;
             break;
         case WM_LBUTTONDOWN:
-            PreDispatch_OnLButtonDown(hwnd, msg);
+            return PreDispatch_OnLButtonDown(hwnd, msg);
             break;
         case WM_LBUTTONUP:
             PreDispatch_OnLButtonUp(hwnd, msg);
             break;
         case WM_MOUSEMOVE:
-            PreDispatch_OnMouseMove(hwnd, msg);
+            return PreDispatch_OnMouseMove(hwnd, msg);
             break;
         case WM_XBUTTONDOWN:
             PreDispatch_OnXButtonDown(hwnd, msg);
@@ -410,7 +419,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             break;
         case WM_NOTIFY: {
             LPNMHDR nmhdr = (LPNMHDR)lParam;
-            FolderBrowserPane *folder_pane = FilePane_GetFolderBrowserPane();
+            FolderBrowserPane *folder_pane = &FilePane_GetFolderBrowserPane()->content.folder;
             if (folder_pane == NULL) goto DEFWNDPROC;
             if (nmhdr->hwndFrom == folder_pane->tree->hwnd)
             {
@@ -443,6 +452,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
                     DrawExplorerFrame(pane, hdc, inactive_brush);
                 }
             END_ENUM_EXPLORERS
+            DrawExplorerFrame(FilePane_GetFolderBrowserPane(), hdc, inactive_brush);
             if (active_pane != NULL) {
                 DrawExplorerFrame(active_pane, hdc, active_brush);
             }

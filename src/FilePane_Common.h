@@ -40,6 +40,9 @@ using RectF = Gdiplus::RectF;
 #define FPC_NAVIGATION_TREE 1
 #define FPC_SINGLE_LINE_EDIT 2
 
+#define FRAME_WIDTH 6
+#define HALF_FRAME_WIDTH 3
+
 struct FolderBrowserTree
 {
     HWND hwnd;
@@ -197,10 +200,16 @@ void Alert(DWORD mb_type, LPCWSTR caption, LPCWSTR format, ...)
     if (pane->content_type == PaneType::Container) {
 #define END_ENUM_CONTAINERS }}
 
-FolderBrowserPane* FilePane_GetFolderBrowserPane() {
-    for(int i = 0; i < g_panes_count; i++) {
+#define EXPAND_BY_HALF_FRAME_WIDTH(rc) { \
+    rc.left -= HALF_FRAME_WIDTH; \
+    rc.right += HALF_FRAME_WIDTH; \
+    rc.top -= HALF_FRAME_WIDTH; \
+    rc.bottom += HALF_FRAME_WIDTH; }
+
+Pane* FilePane_GetFolderBrowserPane() {
+    for(int i = 0; i < MAX_PANES; i++) {
         if (g_panes[i].content_type == PaneType::FolderBrowser) {
-            return &g_panes[i].content.folder;
+            return &g_panes[i];
         }
     }
     return NULL;
@@ -258,11 +267,11 @@ void FilePane_DeallocatePane(Pane *pane)
     memset(pane, 0, sizeof(Pane));
 }
 
-ExplorerBrowserPane* FilePane_GetExplorerPaneById(int id)
+Pane* FilePane_GetExplorerPaneById(int id)
 {
     Pane *pane = FilePane_GetPaneById(id);
     if (pane == NULL) return NULL;
-    if (pane->content_type == PaneType::ExplorerBrowser) return &pane->content.explorer;
+    if (pane->content_type == PaneType::ExplorerBrowser) return pane;
     return NULL;
 }
 

@@ -217,7 +217,7 @@ FolderBrowser_SubClassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UI
                     }
                     else
                     {
-                        FolderBrowserPane *folder_pane = FilePane_GetFolderBrowserPane();
+                        FolderBrowserPane *folder_pane = &FilePane_GetFolderBrowserPane()->content.folder;
                         FolderBrowser_FillItem(folder_pane->tree, &item);
                         if (data->has_items)
                         {
