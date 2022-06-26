@@ -110,6 +110,7 @@ struct ContainerPane {
     float split;
     int rpane_id;
     int lpane_id;
+    RECT split_handle;
 };
 
 struct ExplorerBrowserPane {
@@ -163,6 +164,14 @@ PointF g_right_arrow_points[6] = {
     ,{0,1}
 };
 
+HCURSOR g_idc_sizewe;
+HCURSOR g_idc_sizens;
+HCURSOR g_idc_arrow;
+
+bool g_dragging_split_handle = false;
+int g_dragged_split_handle_pane_id = 0;
+bool b_block_wm_paint = false;
+
 // UTILITY FUNCTIONS
 
 void Alert(DWORD mb_type, LPCWSTR caption, LPCWSTR format, ...)
@@ -176,11 +185,17 @@ void Alert(DWORD mb_type, LPCWSTR caption, LPCWSTR format, ...)
 }
 
 #define ASSERT(test, msg_format, ...) if(!(test)) { Alert(MB_ICONERROR, L"Assert Error", msg_format, __VA_ARGS__); }
+#define CLAMP(v, min, max) ((v) > (max) ? (max) : ((v) < (min) ? (min) : (v)))
 
 #define BEGIN_ENUM_EXPLORERS for(int i = 0; i < MAX_PANES; i++) { \
     Pane *pane = &g_panes[i]; \
     if (pane->content_type == PaneType::ExplorerBrowser) {
 #define END_ENUM_EXPLORERS }}
+
+#define BEGIN_ENUM_CONTAINERS for(int i = 0; i < MAX_PANES; i++) { \
+    Pane *pane = &g_panes[i]; \
+    if (pane->content_type == PaneType::Container) {
+#define END_ENUM_CONTAINERS }}
 
 FolderBrowserPane* FilePane_GetFolderBrowserPane() {
     for(int i = 0; i < g_panes_count; i++) {
@@ -189,6 +204,13 @@ FolderBrowserPane* FilePane_GetFolderBrowserPane() {
         }
     }
     return NULL;
+}
+
+Pane* FilePane_GetRootPane()
+{
+    if (g_panes_count <= 0) 
+        return NULL;
+    return &g_panes[0];
 }
 
 Pane* FilePane_GetPaneById(int id)

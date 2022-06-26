@@ -7,14 +7,15 @@
 
 void ComputeLayout(RECT *rc, Pane *pane)
 {
-    int half_margin = 2;
+    int half_margin = 3;
     //Alert(L"compute layout rc: %d %d %d %d %d %d", rc->left, rc->top, rc->right, rc->bottom, pane->id, pane->content_type);
     if (pane->content_type == PaneType::Container) {
         //Alert(L"%d %d %d %f", pane->id, rc->left, rc->right, pane->content.container.split);
-        RECT rcl, rcr;
+        RECT rcl, rcr, *split_handle;
         pane->rc = *rc;
         rcl = *rc;
         rcr = *rc;
+        split_handle = &pane->content.container.split_handle;
         if (pane->content.container.split_direction == SplitDirection::Horizontal) {
             if (pane->content.container.split_type == SplitType::Fixed) {
                 rcl.bottom = rcl.top + (int)pane->content.container.split;
@@ -23,6 +24,10 @@ void ComputeLayout(RECT *rc, Pane *pane)
                 rcl.bottom = rcl.top + (int)(pane->content.container.split * (rc->bottom - rc->top));
             }
             rcr.top = rcl.bottom;
+            split_handle->top = rcl.bottom - half_margin;
+            split_handle->bottom = split_handle->top + (half_margin * 2);
+            split_handle->left = rcl.left;
+            split_handle->right = rcl.right;
         }
         else if (pane->content.container.split_direction == SplitDirection::Vertical) {
             if (pane->content.container.split_type == SplitType::Fixed) {
@@ -32,6 +37,11 @@ void ComputeLayout(RECT *rc, Pane *pane)
                 rcl.right = rcl.left + (int)(pane->content.container.split * (rc->right - rc->left));
             }
             rcr.left = rcl.right;
+            split_handle->left = rcl.right - half_margin;
+            split_handle->right = split_handle->left + (half_margin * 2);
+            split_handle->top = rcl.top;
+            split_handle->bottom = rcl.bottom;
+            //Alert(MB_OK, L"alert", L"%d %d %d %d", split_handle->left, split_handle->top, split_handle->right, split_handle->bottom);
         }
         //Alert(L"%d %d %d %d", rcl.left, rcl.right, rcr.left, rcr.right);
         Pane *lpane = FilePane_GetPaneById(pane->content.container.lpane_id);
@@ -110,6 +120,10 @@ void DrawExplorerFrame(Pane *pane, HDC hdc, HBRUSH brush)
     FillRect(hdc, &top, brush);
     FillRect(hdc, &right, brush);
     FillRect(hdc, &bottom, brush);
+
+    // HBRUSH red = CreateSolidBrush(RGB(255,0,0));
+    // FillRect(hdc, &FilePane_GetPaneById(pane->parent_id)->content.container.split_handle, red);
+    // DeleteObject(red);
 }
 
 Pane* InitContainerPane(HWND hwnd)
@@ -257,40 +271,131 @@ POINT GetPoint(HWND hwnd, MSG *msg)
     return pt;
 }
 
-/*
-    PreDispatchMessage allows this program to respond to
-    messages that are destined for hosted windows
-*/
-void PreDispatchMessage(HWND hwnd, MSG *msg)
+void PreDispatch_OnLButtonDown(HWND hwnd, MSG *msg)
 {
-    if (msg->message == WM_LBUTTONDOWN)
-    {
-        POINT pt = GetPoint(hwnd, msg);
+    POINT pt = GetPoint(hwnd, msg);
+
+    BEGIN_ENUM_CONTAINERS
+        if (PtInRect(&pane->content.container.split_handle, pt)) {
+            g_dragging_split_handle = true;
+            g_dragged_split_handle_pane_id = pane->id;
+            //Alert(MB_OK, L"In Rect", L"id %d", pane->id);
+            break;
+        }
+    END_ENUM_CONTAINERS
+
+    if (g_dragging_split_handle == false) {
         Pane *pane = FilePane_GetExplorerPaneByPt(pt);
         if (pane != NULL && !pane->content.explorer.focused) {
             FilePane_SetFocus(pane->id);
             InvalidateRect(hwnd, NULL, FALSE);
         }
     }
-    else if(msg->message == WM_XBUTTONDOWN)
-    {
-        POINT pt = GetPoint(hwnd, msg);
-        UINT button = GET_XBUTTON_WPARAM(msg->wParam);
-        Pane *pane = FilePane_GetExplorerPaneByPt(pt);
-        if (pane != NULL) {
-            if (button == XBUTTON1) { // back
-                pane->content.explorer.browser->BrowseToIDList(NULL, SBSP_NAVIGATEBACK);
+}
+
+void PreDispatch_OnLButtonUp(HWND hwnd, MSG *msg)
+{
+    if (g_dragging_split_handle) g_dragging_split_handle = false;
+}
+
+void PreDispatch_OnMouseMove(HWND hwnd, MSG *msg)
+{
+    POINT pt = GetPoint(hwnd, msg);
+
+    if (g_dragging_split_handle) {
+        Pane *pane = FilePane_GetPaneById(g_dragged_split_handle_pane_id);
+        RECT rc = pane->rc;
+        pt.x = pt.x - rc.left;
+        if (pt.x > rc.right) pt.x = rc.right;
+        if (pt.x < 0) pt.x = 0;
+        pt.y = pt.y - rc.top;
+        if (pt.y > rc.bottom) pt.y = rc.bottom;
+        if (pt.y < 0) pt.y = 0;
+
+        if (pane->content.container.split_direction == SplitDirection::Horizontal) {
+            if (pane->content.container.split_type == SplitType::Fixed) {
+                pane->content.container.split = pt.y;
             }
-            else if (button == XBUTTON2) { // forward
-                pane->content.explorer.browser->BrowseToIDList(NULL, SBSP_NAVIGATEFORWARD);
+            else {
+                pane->content.container.split = CLAMP(float(pt.y) / float((rc.bottom - rc.top)), 0.0, 1.0);
             }
-            //IFolderView *ppv;
-            //pane->content.explorer.browser->BrowseToObject
-            // if (SUCCEEDED(pane->content.explorer.browser->GetCurrentView(IID_IFolderView, (void**)&ppv))) {
-                
-            // }
         }
+        else if (pane->content.container.split_direction == SplitDirection::Vertical) {
+            if (pane->content.container.split_type == SplitType::Fixed) {
+                pane->content.container.split = pt.x;
+            }
+            else {
+                pane->content.container.split = CLAMP(float(pt.x) / float((rc.right - rc.left)), 0.0, 1.0);
+                //Alert(MB_OK, L"move", L"split %f", pane->content.container.split);
+            }
+        }
+        b_block_wm_paint = true;
+        ComputeLayout(&rc, pane);
+        b_block_wm_paint = false;
     }
+    else {
+        BEGIN_ENUM_CONTAINERS
+            if (PtInRect(&pane->content.container.split_handle, pt)) {
+                if (pane->content.container.split_direction == SplitDirection::Horizontal) {
+                    SetCursor(g_idc_sizens);
+                }
+                else if (pane->content.container.split_direction == SplitDirection::Vertical) {
+                    SetCursor(g_idc_sizewe);
+                }
+                break;
+            }
+        END_ENUM_CONTAINERS
+    }
+}
+
+void PreDispatch_OnXButtonDown(HWND hwnd, MSG *msg)
+{
+    POINT pt = GetPoint(hwnd, msg);
+    UINT button = GET_XBUTTON_WPARAM(msg->wParam);
+    Pane *pane = FilePane_GetExplorerPaneByPt(pt);
+    if (pane != NULL) {
+        if (button == XBUTTON1) { // back
+            pane->content.explorer.browser->BrowseToIDList(NULL, SBSP_NAVIGATEBACK);
+        }
+        else if (button == XBUTTON2) { // forward
+            pane->content.explorer.browser->BrowseToIDList(NULL, SBSP_NAVIGATEFORWARD);
+        }
+        //IFolderView *ppv;
+        //pane->content.explorer.browser->BrowseToObject
+        // if (SUCCEEDED(pane->content.explorer.browser->GetCurrentView(IID_IFolderView, (void**)&ppv))) {
+            
+        // }
+    }
+}
+
+/*
+    PreDispatchMessage allows this program to respond to
+    messages that are destined for hosted windows
+*/
+int PreDispatchMessage(HWND hwnd, MSG *msg)
+{
+    switch(msg->message)
+    {
+        case WM_ERASEBKGND:
+            if (b_block_wm_paint) return 0;
+            break;
+        case WM_PAINT:
+            if (b_block_wm_paint) return 0;
+            break;
+        case WM_LBUTTONDOWN:
+            PreDispatch_OnLButtonDown(hwnd, msg);
+            break;
+        case WM_LBUTTONUP:
+            PreDispatch_OnLButtonUp(hwnd, msg);
+            break;
+        case WM_MOUSEMOVE:
+            PreDispatch_OnMouseMove(hwnd, msg);
+            break;
+        case WM_XBUTTONDOWN:
+            PreDispatch_OnXButtonDown(hwnd, msg);
+            break;
+    }
+    return 1;
 }
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -377,6 +482,10 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     hr = OleInitialize(NULL);
     if FAILED(hr) return 2;
 
+    g_idc_sizens = LoadCursorW(0, IDC_SIZENS);
+    g_idc_sizewe = LoadCursorW(0, IDC_SIZEWE);
+    g_idc_arrow = LoadCursorW(0, IDC_ARROW);
+
     Pane *primary_pane = InitContainerPane(hwnd);
     InitFolderBrowserPane(hwnd, hInstance, primary_pane);
     Pane *ex1 = InitExplorerBrowserPane(hwnd, hInstance, primary_pane);
@@ -392,8 +501,9 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     // main message loop
     while (GetMessage(&msg, NULL, 0, 0)) {
         TranslateMessage(&msg);
-        PreDispatchMessage(hwnd, &msg);
-        DispatchMessage(&msg);
+        if (PreDispatchMessage(hwnd, &msg)) {
+            DispatchMessage(&msg);
+        }
     }
 
     // cleanup
