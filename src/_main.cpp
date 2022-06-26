@@ -48,11 +48,9 @@ void ComputeLayout(RECT *rc, Pane *pane)
         ComputeLayout(&rcl, lpane);
         ComputeLayout(&rcr, rpane);
     } else if (pane->content_type == PaneType::ExplorerBrowser) {
-        //Alert(L"browser rc: %d %d %d %d", rc->left, rc->top, rc->right, rc->bottom);
-        pane->rc.left = rc->left + HALF_FRAME_WIDTH;
-        pane->rc.right = rc->right - HALF_FRAME_WIDTH;
-        pane->rc.top = rc->top + HALF_FRAME_WIDTH;
-        pane->rc.bottom = rc->bottom - HALF_FRAME_WIDTH;
+
+        pane->rc = *rc;
+        SHRINK_RECT(pane->rc, HALF_FRAME_WIDTH);
         
         RECT pos;
         pos.left = pane->rc.left;
@@ -69,11 +67,8 @@ void ComputeLayout(RECT *rc, Pane *pane)
         pos.bottom = pane->rc.bottom;
         pane->content.explorer.browser->SetRect(NULL, pos);
     } else if (pane->content_type == PaneType::FolderBrowser) {
-        //Alert(L"folder rc: %d %d %d %d", rc->left, rc->top, rc->right, rc->bottom);
-        pane->rc.left = rc->left + HALF_FRAME_WIDTH;
-        pane->rc.right = rc->right - HALF_FRAME_WIDTH;
-        pane->rc.top = rc->top + HALF_FRAME_WIDTH;
-        pane->rc.bottom = rc->bottom - HALF_FRAME_WIDTH;
+        pane->rc = *rc;
+        SHRINK_RECT(pane->rc, HALF_FRAME_WIDTH);
         SetWindowPos(pane->content.folder.tree->hwnd, NULL, 
             pane->rc.left, pane->rc.top, pane->rc.right - pane->rc.left, pane->rc.bottom - pane->rc.top, NULL);
     }
@@ -83,10 +78,7 @@ void ComputeLayout(HWND hwnd)
 {
     RECT rc;
     GetClientRect(hwnd, &rc);
-    rc.bottom -= HALF_FRAME_WIDTH;
-    rc.left += HALF_FRAME_WIDTH;
-    rc.right -= HALF_FRAME_WIDTH;
-    rc.top += HALF_FRAME_WIDTH;
+    SHRINK_RECT(rc, HALF_FRAME_WIDTH);
     ComputeLayout(&rc, g_panes);
 }
 
@@ -336,7 +328,7 @@ int PreDispatch_OnMouseMove(HWND hwnd, MSG *msg)
         ComputeLayout(&rc, pane);
         b_block_wm_paint = false;
         SendMessageW(hwnd, WM_SETREDRAW, TRUE, 0);
-        EXPAND_BY_HALF_FRAME_WIDTH(rc)
+        EXPAND_RECT(rc, HALF_FRAME_WIDTH);
         RedrawWindow(hwnd, &rc, NULL, RDW_FRAME | RDW_NOERASE | RDW_INVALIDATE | RDW_ALLCHILDREN);
         UpdateWindow(hwnd);
         return 0;

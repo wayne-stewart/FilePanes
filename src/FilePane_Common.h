@@ -200,11 +200,17 @@ void Alert(DWORD mb_type, LPCWSTR caption, LPCWSTR format, ...)
     if (pane->content_type == PaneType::Container) {
 #define END_ENUM_CONTAINERS }}
 
-#define EXPAND_BY_HALF_FRAME_WIDTH(rc) { \
-    rc.left -= HALF_FRAME_WIDTH; \
-    rc.right += HALF_FRAME_WIDTH; \
-    rc.top -= HALF_FRAME_WIDTH; \
-    rc.bottom += HALF_FRAME_WIDTH; }
+#define EXPAND_RECT(rc, v) { \
+    (rc).left = (rc).left - (v); \
+    (rc).right = (rc).right + (v); \
+    (rc).top = (rc).top - (v); \
+    (rc).bottom = (rc).bottom + (v); }
+
+#define SHRINK_RECT(rc, v) { \
+    (rc).left = (rc).left + (v); \
+    (rc).right = (rc).right - (v); \
+    (rc).top = (rc).top + (v); \
+    (rc).bottom = (rc).bottom - (v); }
 
 Pane* FilePane_GetFolderBrowserPane() {
     for(int i = 0; i < MAX_PANES; i++) {
