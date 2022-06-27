@@ -13,7 +13,8 @@ HWND CreateMainWindow(HINSTANCE hInstance)
     wc.lpszMenuName     = NULL;
     wc.lpfnWndProc      = WndProc;
     wc.hCursor          = LoadCursor(NULL, IDC_ARROW);
-    wc.hIcon            = LoadIcon(NULL, IDI_APPLICATION);
+    //wc.hIcon            = (HICON)LoadImage(hInstance, L"../assets/appicon.ico", IMAGE_ICON, 0, 0, LR_LOADFROMFILE | LR_DEFAULTSIZE);
+    wc.hIcon            = (HICON)LoadImage(hInstance, L"AppIcon", IMAGE_ICON, 0, 0, LR_COPYFROMRESOURCE | LR_DEFAULTSIZE);
 
     RegisterClassW(&wc);
     HWND hwnd = CreateWindowW(wc.lpszClassName, wc.lpszClassName,
