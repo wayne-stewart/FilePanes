@@ -151,9 +151,6 @@ void FolderBrowser_FillItem(FolderBrowserTree *tree, TVITEMW *parent);
 
 /// GLOBAL STATE
 
-int g_next_id = 0;
-int NextId() { return ++g_next_id; }
-
 #define MAX_PANES 50
 int g_panes_count = 0;
 Pane g_panes[MAX_PANES] = {};
@@ -232,31 +229,25 @@ Pane* FilePane_GetFolderBrowserPane() {
     return NULL;
 }
 
-Pane* FilePane_GetRootPane()
-{
-    if (g_panes_count <= 0) 
-        return NULL;
-    return &g_panes[0];
-}
-
 Pane* FilePane_GetPaneById(int id)
 {
-    for (int i = 0; i < MAX_PANES; i++) {
-        Pane *pane = &g_panes[i];
-        if (pane->content_type != PaneType::NotSet && pane->id == id) {
-            return pane;
-        }
-    }
-    return NULL;
+    Pane *pane = &g_panes[id];
+    return pane;
+}
+
+Pane* FilePane_GetRootPane()
+{
+    Pane *pane = FilePane_GetPaneById(1);
+    return pane;
 }
 
 Pane* FilePane_AllocatePane()
 {
-    for(int i = 0; i < MAX_PANES; i++) {
+    for(int i = 1; i < MAX_PANES; i++) {
         Pane *pane = &g_panes[i];
         if (pane->content_type == PaneType::NotSet) {
             memset(pane, 0, sizeof(Pane));
-            pane->id = NextId();
+            pane->id = i;
             g_panes_count++;
             return pane;
         }

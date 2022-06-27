@@ -79,7 +79,7 @@ void ComputeLayout(HWND hwnd)
     RECT rc;
     GetClientRect(hwnd, &rc);
     SHRINK_RECT(rc, HALF_FRAME_WIDTH);
-    ComputeLayout(&rc, g_panes);
+    ComputeLayout(&rc, FilePane_GetRootPane());
 }
 
 void DrawExplorerFrame(Pane *pane, HDC hdc, HBRUSH brush)
@@ -110,10 +110,6 @@ void DrawExplorerFrame(Pane *pane, HDC hdc, HBRUSH brush)
     FillRect(hdc, &top, brush);
     FillRect(hdc, &right, brush);
     FillRect(hdc, &bottom, brush);
-
-    // HBRUSH red = CreateSolidBrush(RGB(255,0,0));
-    // FillRect(hdc, &FilePane_GetPaneById(pane->parent_id)->content.container.split_handle, red);
-    // DeleteObject(red);
 }
 
 Pane* InitContainerPane(HWND hwnd)
@@ -270,7 +266,6 @@ int PreDispatch_OnLButtonDown(HWND hwnd, MSG *msg)
             FilePane_SetSplitHandleCursor(pane);
             g_dragging_split_handle = true;
             g_dragged_split_handle_pane_id = pane->id;
-            //Alert(MB_OK, L"In Rect", L"id %d", pane->id);
             return 0;
             break;
         }
@@ -281,7 +276,6 @@ int PreDispatch_OnLButtonDown(HWND hwnd, MSG *msg)
         if (pane != NULL && !pane->content.explorer.focused) {
             FilePane_SetFocus(pane->id);
             InvalidateRect(hwnd, NULL, FALSE);
-            //UpdateWindow(hwnd);
         }
     }
     return 1;

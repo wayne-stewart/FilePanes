@@ -6,7 +6,7 @@ if not exist build (
 )
 pushd build
 del /s *.obj *.exe
-cl.exe ../src/_main.cpp /MT /FeFilePanes.exe
+cl.exe ../src/_main.cpp /MT /O2 /FeFilePanes.exe
 
 FilePanes.exe
 

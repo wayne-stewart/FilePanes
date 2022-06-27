@@ -105,8 +105,6 @@ FolderBrowser_OnItemPaint(FolderBrowserTree *tree, LPNMTVCUSTOMDRAW nmtvcd)
     item.cchTextMax = ARRAYSIZE(buffer);
     SendMessage(tree->hwnd, TVM_GETITEMW, 0, LPARAM(&item));
 
-    //Alert(L"%d %d", item.state, item.stateMask);
-
     FolderItemData *data = (FolderItemData*)item.lParam;
     int indent = data->level * 15;
     bool show_arrow = data->items_checked == 0 || data->has_items;
@@ -177,22 +175,6 @@ FolderBrowser_SubClassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UI
     {
         case WM_ERASEBKGND: {
             if (g_dragging_split_handle) return 0;
-        } break;
-        case WM_MOUSEMOVE: {
-            // POINTS pts = MAKEPOINTS(lParam);
-            // TVITEMW item;
-            // WCHAR item_buffer[260] = {};
-            // WCHAR buffer[128] = {};
-            // if (FolderBrowser_HitTest(hwnd, pts, &item, item_buffer, ARRAYSIZE(item_buffer)))
-            // {
-            //     wsprintfW(buffer, L"%d, %d, %s", pts.x, pts.y, item.pszText);
-            //     SendMessageW(GetParent(hwnd), WM_SETTEXT, 0, LPARAM(buffer));
-            // }
-            // else
-            // {
-            //     wsprintfW(buffer, L"%d, %d", pts.x, pts.y);
-            //     SendMessageW(GetParent(hwnd), WM_SETTEXT, 0, LPARAM(buffer));
-            // }
         } break;
         case WM_LBUTTONDBLCLK: {
             // prevent default behavior when double clicking

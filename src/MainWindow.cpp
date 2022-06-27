@@ -7,7 +7,7 @@ HWND CreateMainWindow(HINSTANCE hInstance)
     wc.style        = CS_HREDRAW | CS_VREDRAW;
     wc.cbClsExtra   = 0;
     wc.cbWndExtra   = 0;
-    wc.lpszClassName    = L"MainWindow";
+    wc.lpszClassName    = L"File Panes";
     wc.hInstance        = hInstance;
     wc.hbrBackground    = GetSysColorBrush(COLOR_3DFACE);
     wc.lpszMenuName     = NULL;
