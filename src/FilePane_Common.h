@@ -4,6 +4,12 @@
 
 #define UNICODE 1
 
+// 4668 warns when replacing macro definitions with 0.
+// 4458 warns when one definition hides another.
+// I don't need to be warned about what is in Microsoft's header files.
+#pragma warning(push)
+#pragma warning(disable:4668 4458)
+
 #include <windows.h>
 #include <windowsx.h>           // for WM_COMMAND handling macros
 #include <shlobj.h>             // shell stuff
@@ -18,6 +24,16 @@
 #include <Gdiplus.h>
 #include <commctrl.h>
 #include <wingdi.h>
+
+#pragma warning(pop)
+
+// 4820 is an informative warning about how much padding is added to a struct
+// for memory alignment. this is fine.
+#pragma warning(disable:4820)
+
+// 4711 is an informative warning about functions selected for automatic
+// inline expansion. this is fine.
+#pragma warning(disable:4711)
 
 #pragma comment(lib, "user32")
 #pragma comment(lib, "ole32")
@@ -77,6 +93,10 @@ public:
     IFACEMETHODIMP OnNavigationPending(PCIDLIST_ABSOLUTE pidlFolder);
     IFACEMETHODIMP OnNavigationComplete(PCIDLIST_ABSOLUTE pidlFolder);
     IFACEMETHODIMP OnNavigationFailed(PCIDLIST_ABSOLUTE /* pidlFolder */);
+
+    // fix compiler warning 5204 about not having a virtual deconstructor
+    // in case this class is subclassed.
+    virtual ~ExplorerBrowserEvents() { }
 private:
     long _cRef;
     int _pane_id;
@@ -179,7 +199,7 @@ void Alert(DWORD mb_type, LPCWSTR caption, LPCWSTR format, ...)
     va_list args;
     va_start(args, format);
     WCHAR buffer[1024] = {};
-    vswprintf(buffer, format, args);
+    vswprintf(buffer, ARRAYSIZE(buffer), format, args);
     va_end(args);
     MessageBoxW(NULL, buffer, caption, MB_OK | mb_type);
 }

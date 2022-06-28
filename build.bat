@@ -9,7 +9,7 @@ del /s *.obj *.exe *.res *.manifest
 
 rc /fo filepane.res ../assets/resource.rc
 
-cl.exe ../src/_main.cpp /MT /O2 /FeFilePanes.exe /link filepane.res
+cl.exe ../src/_main.cpp /MT /O2 /Wall /WX /FeFilePanes.exe /link filepane.res
 
 FilePanes.exe
 

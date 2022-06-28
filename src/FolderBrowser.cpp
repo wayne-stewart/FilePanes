@@ -78,9 +78,15 @@ FolderBrowser_OnCustomDraw(FolderBrowserTree *tree, LPNMTVCUSTOMDRAW pnmtvcd)
 void 
 FolderBrowser_OnItemPaint(FolderBrowserTree *tree, LPNMTVCUSTOMDRAW nmtvcd)
 {
-    RECT rc = nmtvcd->nmcd.rc;
     // not sure what these 0 height items are, but we don't need to draw them.
+    RECT rc = nmtvcd->nmcd.rc;
     if (rc.bottom == 0 && rc.top == 0) return;
+
+    float fx, fy, fw, fh;
+    fx = float(rc.left);
+    fy = float(rc.top);
+    fw = float(rc.right - rc.left);
+    fh = float(rc.bottom - rc.top);
 
     HDC hdc = nmtvcd->nmcd.hdc;
     Graphics g(hdc);
@@ -126,18 +132,18 @@ FolderBrowser_OnItemPaint(FolderBrowserTree *tree, LPNMTVCUSTOMDRAW nmtvcd)
 
     PointF local_points[6];
     memcpy(local_points, g_right_arrow_points, sizeof(g_right_arrow_points));
-    int h = GetHeight(local_points, ARRAYSIZE(local_points));
-    int w = GetWidth(local_points, ARRAYSIZE(local_points));
+    float h = GetHeight(local_points, ARRAYSIZE(local_points));
+    float w = GetWidth(local_points, ARRAYSIZE(local_points));
     indent += 5;
     if (show_arrow)
     {
-        Translate(local_points, ARRAYSIZE(local_points), rc.left + indent, rc.top + ((rc.bottom - rc.top) - h)/2);
+        Translate(local_points, ARRAYSIZE(local_points), fx + float(indent), fy + (fh - h)/2.0f);
         g.FillPolygon(&arrow_brush, local_points, ARRAYSIZE(local_points));
     }
 
     int cx,cy;
     ImageList_GetIconSize(tree->image_list, &cx, &cy);
-    indent += w + 10;
+    indent += int(w) + 10;
     ImageList_Draw(tree->image_list, item.iImage, hdc, rc.left + indent, rc.top + (((rc.bottom - rc.top) - cy)/2), ILD_TRANSPARENT);
 
     RectF layout_rect(0.0, 0.0, 100.0, 50.0);
@@ -145,9 +151,9 @@ FolderBrowser_OnItemPaint(FolderBrowserTree *tree, LPNMTVCUSTOMDRAW nmtvcd)
     g.MeasureString(L"Wg", 2, &font, layout_rect, &bounding_box);
     indent += cx + 2;
     PointF text_point;
-    text_point.X = rc.left + indent;
-    text_point.Y = rc.top + ((((rc.bottom - rc.top) - (bounding_box.Height)))/2); 
-    g.DrawString((LPCWSTR)item.pszText, wcslen((LPCWSTR)item.pszText), &font, text_point, &text_brush);
+    text_point.X = float(rc.left + indent);
+    text_point.Y = float(rc.top) + (((float(rc.bottom - rc.top) - (bounding_box.Height)))/2.0f);
+    g.DrawString((LPCWSTR)item.pszText, (int)wcslen((LPCWSTR)item.pszText), &font, text_point, &text_brush);
 }
 
 BOOL 
@@ -171,6 +177,9 @@ FolderBrowser_HitTest(HWND hwnd, POINTS pts, TVITEMW *item, LPWSTR buffer, int b
 LRESULT 
 FolderBrowser_SubClassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
 {
+    UNREFERENCED_PARAMETER(dwRefData);
+    UNREFERENCED_PARAMETER(uIdSubclass);
+
     switch(msg)
     {
         case WM_ERASEBKGND: {
@@ -196,9 +205,8 @@ FolderBrowser_SubClassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UI
                 {
                     if (data->expanded)
                     {
-                        BOOL ret = TreeView_Expand(hwnd, item.hItem, TVE_COLLAPSE);
+                        TreeView_Expand(hwnd, item.hItem, TVE_COLLAPSE);
                         data->expanded = 0;
-                        //Alert(L"ret: %d", ret);
                     }
                     else
                     {
@@ -272,7 +280,6 @@ FolderBrowser_InsertItem(FolderBrowserTree *tree, SHFILEINFOW *item, HTREEITEM p
     TVITEMW tvi;
     TVINSERTSTRUCTW tvins;
     HTREEITEM hti;
-    ICONINFO iconinfo;
 
     tvi.mask = TVIF_TEXT | TVIF_IMAGE | TVIF_PARAM | TVIF_CHILDREN | TVIF_STATE;
 

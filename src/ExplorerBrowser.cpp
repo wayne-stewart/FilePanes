@@ -19,12 +19,12 @@ IFACEMETHODIMP ExplorerBrowserEvents::QueryInterface(REFIID riid, void **ppv)
 
 IFACEMETHODIMP_(ULONG) ExplorerBrowserEvents::AddRef()
 {
-    return InterlockedIncrement(&_cRef);
+    return (ULONG)InterlockedIncrement(&_cRef);
 }
 
 IFACEMETHODIMP_(ULONG) ExplorerBrowserEvents::Release()
 {
-    long cRef = InterlockedDecrement(&_cRef);
+    ULONG cRef = (ULONG)InterlockedDecrement(&_cRef);
     if (!cRef)
     {
         delete this;
@@ -46,12 +46,12 @@ IFACEMETHODIMP ExplorerBrowserEvents::QueryService(REFGUID guidService, REFIID r
 }
 
 // IExplorerBrowserEvents
-IFACEMETHODIMP ExplorerBrowserEvents::OnViewCreated(IShellView *psv)
+IFACEMETHODIMP ExplorerBrowserEvents::OnViewCreated(IShellView  * /* psv */)
 {
     return E_NOTIMPL;
 }
 
-IFACEMETHODIMP ExplorerBrowserEvents::OnNavigationPending(PCIDLIST_ABSOLUTE pidlFolder)
+IFACEMETHODIMP ExplorerBrowserEvents::OnNavigationPending(PCIDLIST_ABSOLUTE /* pidlFolder */)
 {
     // must return S_OK for navigation to proceed. otherwise navigation is halted.
     return S_OK;

@@ -20,7 +20,7 @@ void ComputeLayout(RECT *rc, Pane *pane)
                 rcl.bottom = rcl.top + (int)pane->content.container.split;
             }
             else {
-                rcl.bottom = rcl.top + (int)(pane->content.container.split * (rc->bottom - rc->top));
+                rcl.bottom = rcl.top + (int)(pane->content.container.split * float(rc->bottom - rc->top));
             }
             rcr.top = rcl.bottom;
             split_handle->top = rcl.bottom - HALF_FRAME_WIDTH;
@@ -33,7 +33,7 @@ void ComputeLayout(RECT *rc, Pane *pane)
                 rcl.right = rcl.left + (int)pane->content.container.split;
             }
             else {
-                rcl.right = rcl.left + (int)(pane->content.container.split * (rc->right - rc->left));
+                rcl.right = rcl.left + (int)(pane->content.container.split * float(rc->right - rc->left));
             }
             rcr.left = rcl.right;
             split_handle->left = rcl.right - HALF_FRAME_WIDTH;
@@ -140,7 +140,9 @@ void InitFolderBrowserPane(HWND hwnd, HINSTANCE hInstance, Pane *parent)
 LRESULT 
 SingleLineEdit_SubClassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
 {
-    HANDLE handle;
+    UNREFERENCED_PARAMETER(dwRefData);
+    UNREFERENCED_PARAMETER(uIdSubclass);
+
     switch(msg)
     {
         case WM_CHAR: {
@@ -283,6 +285,9 @@ int PreDispatch_OnLButtonDown(HWND hwnd, MSG *msg)
 
 void PreDispatch_OnLButtonUp(HWND hwnd, MSG *msg)
 {
+    UNREFERENCED_PARAMETER(hwnd);
+    UNREFERENCED_PARAMETER(msg);
+
     if (g_dragging_split_handle) g_dragging_split_handle = false;
 }
 
@@ -302,18 +307,18 @@ int PreDispatch_OnMouseMove(HWND hwnd, MSG *msg)
 
         if (pane->content.container.split_direction == SplitDirection::Horizontal) {
             if (pane->content.container.split_type == SplitType::Fixed) {
-                pane->content.container.split = pt.y;
+                pane->content.container.split = float(pt.y);
             }
             else {
-                pane->content.container.split = CLAMP(float(pt.y) / float((rc.bottom - rc.top)), 0.0, 1.0);
+                pane->content.container.split = CLAMP(float(pt.y) / float((rc.bottom - rc.top)), 0.0f, 1.0f);
             }
         }
         else if (pane->content.container.split_direction == SplitDirection::Vertical) {
             if (pane->content.container.split_type == SplitType::Fixed) {
-                pane->content.container.split = pt.x;
+                pane->content.container.split = float(pt.x);
             }
             else {
-                pane->content.container.split = CLAMP(float(pt.x) / float((rc.right - rc.left)), 0.0, 1.0);
+                pane->content.container.split = CLAMP(float(pt.x) / float((rc.right - rc.left)), 0.0f, 1.0f);
                 //Alert(MB_OK, L"move", L"split %f", pane->content.container.split);
             }
         }
@@ -453,6 +458,10 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
 {
+    UNREFERENCED_PARAMETER(hPrevInstance);
+    UNREFERENCED_PARAMETER(pCmdLine);
+    UNREFERENCED_PARAMETER(nCmdShow);
+
     HRESULT hr;
     HWND hwnd;
     MSG msg;
@@ -465,7 +474,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     // Initialize GDI+.
     Gdiplus::GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
 
-    Scale(g_right_arrow_points, ARRAYSIZE(g_right_arrow_points), 10.0/6.0);
+    Scale(g_right_arrow_points, ARRAYSIZE(g_right_arrow_points), 10.0f/6.0f);
 
     hwnd = CreateMainWindow(hInstance);
 
