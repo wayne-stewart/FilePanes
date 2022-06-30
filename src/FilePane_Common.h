@@ -53,11 +53,46 @@ using PointF = Gdiplus::PointF;
 using Font = Gdiplus::Font;
 using RectF = Gdiplus::RectF;
 
-#define FPC_NAVIGATION_TREE 1
-#define FPC_SINGLE_LINE_EDIT 2
+#define IDC_FOLDERBROWSER 1
+#define IDC_URI 2
+#define IDC_BUTTON 3
 
 #define FRAME_WIDTH 6
 #define HALF_FRAME_WIDTH 3
+
+enum SplitDirection {
+    Vertical = 0,
+    Horizontal = 1
+};
+
+// fixed:   the split value in Pane represents the number of pixels the first
+//          item in the pane is set to. the second item in the pane fills the
+//          rest of the space.
+// float:   the split value in Pane represents the percentage from 0 to 1 that
+//          divides the first and second panes in the container
+//
+//          these values are only used when the content_type = Container
+enum SplitType {
+    Fixed = 0,
+    Float = 1
+};
+
+enum PaneType {
+    NotSet = 0,
+    Container = 1,
+    FolderBrowser = 2,
+    ExplorerBrowser = 3
+};
+
+enum ControlType : UINT8 {
+    Button = 1,
+    Text = 2
+};
+
+enum ButtonFunction : UINT8 {
+    SplitHorizontal = 1,
+    SplitVertical = 2
+};
 
 struct FolderBrowserTree
 {
@@ -73,6 +108,12 @@ struct FolderItemData {
     bool items_checked;
     bool has_items;
     bool expanded;
+};
+
+struct ButtonID {
+    ControlType type;
+    UINT8 pane_id;
+    ButtonFunction function;
 };
 
 class ExplorerBrowserEvents : public IServiceProvider, public IExplorerBrowserEvents //, public ICommDlgBrowser, public ICommDlgBrowser2
@@ -102,31 +143,6 @@ private:
     int _pane_id;
 };
 
-
-enum SplitDirection {
-    Vertical = 0,
-    Horizontal = 1
-};
-
-// fixed:   the split value in Pane represents the number of pixels the first
-//          item in the pane is set to. the second item in the pane fills the
-//          rest of the space.
-// float:   the split value in Pane represents the percentage from 0 to 1 that
-//          divides the first and second panes in the container
-//
-//          these values are only used when the content_type = Container
-enum SplitType {
-    Fixed = 0,
-    Float = 1
-};
-
-enum PaneType {
-    NotSet = 0,
-    Container = 1,
-    FolderBrowser = 2,
-    ExplorerBrowser = 3
-};
-
 struct ContainerPane {
     SplitDirection split_direction;
     SplitType split_type;
@@ -142,6 +158,8 @@ struct ExplorerBrowserPane {
     DWORD event_cookie;
     bool focused;
     HWND txt_uri;
+    HWND btn_split_horizontal;
+    HWND btn_split_vertical;
 };
 
 struct FolderBrowserPane {

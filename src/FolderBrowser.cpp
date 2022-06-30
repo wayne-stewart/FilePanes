@@ -253,12 +253,12 @@ FolderBrowser_Create(FolderBrowserTree *tree, HWND parent, HINSTANCE hInstance, 
         , rc->left, rc->top // x, y
         , rc->right - rc->left, rc->bottom - rc->top // width, height
         , parent // hwndParent
-        , NULL //(HMENU)ID_TREEVIEW // hMenu
+        , (HMENU)IDC_FOLDERBROWSER //(HMENU)ID_TREEVIEW // hMenu
         , hInstance // hInstance
         , NULL // lpParam
     );
 
-    SetWindowSubclass(hwnd_tree, FolderBrowser_SubClassProc, FPC_NAVIGATION_TREE, NULL);
+    SetWindowSubclass(hwnd_tree, FolderBrowser_SubClassProc, NULL, NULL);
 
     tree->font = (HFONT)SendMessage(tree->hwnd, WM_GETFONT, NULL, NULL);
     

@@ -55,14 +55,26 @@ void ComputeLayout(RECT *rc, Pane *pane)
         RECT pos;
         pos.left = pane->rc.left;
         pos.top = pane->rc.top;
-        pos.right = pane->rc.right;
+        pos.right = pane->rc.right - 60;
         pos.bottom = pane->rc.top + 30;
         SetWindowPos(pane->content.explorer.txt_uri, NULL,
             pos.left, pos.top, pos.right - pos.left, pos.bottom - pos.top, NULL);
         RECT offset = pos;
-        OffsetRect(&offset, -pos.left + 2, -pos.top + 5);
+        OffsetRect(&offset, -pos.left + 5, -pos.top + 5);
         Edit_SetRect(pane->content.explorer.txt_uri, &offset);
-        
+
+        pos.left = pos.right;
+        pos.right += 30;
+        SetWindowPos(pane->content.explorer.btn_split_horizontal, NULL,
+            pos.left, pos.top, pos.right - pos.left, pos.bottom - pos.top, NULL);
+
+        pos.left = pos.right;
+        pos.right += 30;
+        SetWindowPos(pane->content.explorer.btn_split_vertical, NULL,
+            pos.left, pos.top, pos.right - pos.left, pos.bottom - pos.top, NULL);
+
+        pos.left = pane->rc.left;
+        pos.right = pane->rc.right;
         pos.top = pos.bottom;
         pos.bottom = pane->rc.bottom;
         pane->content.explorer.browser->SetRect(NULL, pos);
@@ -158,7 +170,7 @@ SingleLineEdit_SubClassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, U
             return 0;
         } break;
         case WM_DESTROY: {
-            RemoveWindowSubclass(hwnd, SingleLineEdit_SubClassProc, FPC_SINGLE_LINE_EDIT);
+            RemoveWindowSubclass(hwnd, SingleLineEdit_SubClassProc, IDC_URI);
         } break;
     }
     return DefSubclassProc(hwnd, msg, wParam, lParam);
@@ -211,7 +223,10 @@ Pane* InitExplorerBrowserPane(HWND hwnd, HINSTANCE hInstance, Pane *parent)
         , NULL // lpParam
     );
     SetWindowFont(pane->content.explorer.txt_uri, GetWindowFont(FilePane_GetFolderBrowserPane()->content.folder.tree->hwnd), NULL);
-    SetWindowSubclass(pane->content.explorer.txt_uri, SingleLineEdit_SubClassProc, FPC_SINGLE_LINE_EDIT, NULL);
+    SetWindowSubclass(pane->content.explorer.txt_uri, SingleLineEdit_SubClassProc, IDC_URI, NULL);
+
+    pane->content.explorer.btn_split_horizontal = CreateButton(hwnd, hInstance, L"H", pane->id, ButtonFunction::SplitHorizontal);
+    pane->content.explorer.btn_split_vertical = CreateButton(hwnd, hInstance, L"V", pane->id, ButtonFunction::SplitVertical);
 
     // browse to folder location
     IShellFolder *pshf;
@@ -407,27 +422,33 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
         case WM_SETCURSOR:
             if (g_dragging_split_handle) return 1;
             break;
+        case WM_CTLCOLORBTN: {
+            //HDC hdc = (HDC)wParam;
+            return (LRESULT)GetSysColorBrush(WHITE_BRUSH);
+        } break;
         case WM_NOTIFY: {
             LPNMHDR nmhdr = (LPNMHDR)lParam;
-            FolderBrowserPane *folder_pane = &FilePane_GetFolderBrowserPane()->content.folder;
-            if (folder_pane == NULL) goto DEFWNDPROC;
-            if (nmhdr->hwndFrom == folder_pane->tree->hwnd)
+            switch(nmhdr->idFrom)
             {
-                switch (nmhdr->code)
-                {
-                    case NM_CUSTOMDRAW: {
-                        return FolderBrowser_OnCustomDraw(folder_pane->tree, (LPNMTVCUSTOMDRAW)nmhdr);
-                    } break;
-                    case NM_KILLFOCUS: {
-                        folder_pane->tree->focused = false;
-                        InvalidateRect(folder_pane->tree->hwnd, NULL, FALSE);
-                    } break;
-                    case NM_SETFOCUS: {
-                        folder_pane->tree->focused = true;
-                        InvalidateRect(folder_pane->tree->hwnd, NULL, FALSE);
-                    } break;
-                }
-            }} break;
+                case IDC_FOLDERBROWSER: {
+                    FolderBrowserPane *folder_pane = &FilePane_GetFolderBrowserPane()->content.folder;
+                    switch (nmhdr->code)
+                    {
+                        case NM_CUSTOMDRAW: {
+                            return FolderBrowser_OnCustomDraw(folder_pane->tree, (LPNMTVCUSTOMDRAW)nmhdr);
+                        } break;
+                        case NM_KILLFOCUS: {
+                            folder_pane->tree->focused = false;
+                            InvalidateRect(folder_pane->tree->hwnd, NULL, FALSE);
+                        } break;
+                        case NM_SETFOCUS: {
+                            folder_pane->tree->focused = true;
+                            InvalidateRect(folder_pane->tree->hwnd, NULL, FALSE);
+                        } break;
+                    }
+                } break;
+            }
+        } break;
         case WM_PAINT: {
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hwnd, &ps);
@@ -450,9 +471,25 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             DeleteObject(inactive_brush);
             EndPaint(hwnd, &ps);
         } break;
+        case WM_COMMAND: {
+            USHORT ctl_id = LOWORD(wParam);
+            USHORT code = HIWORD(wParam);
+            //HWND ctl_handle = (HWND)lParam;
+            switch(code)
+            {
+                case BN_CLICKED: {
+                    ButtonFunction function = (ButtonFunction)HIBYTE(ctl_id);
+                    if (function == ButtonFunction::SplitHorizontal) {
+                        Alert(MB_OK, L"button click", L"split horizontal");
+                    }
+                    else if (function == ButtonFunction::SplitVertical) {
+                        Alert(MB_OK, L"button click", L"split vertical");
+                    }
+                } break;
+            }
+        } break;
     }
 
-    DEFWNDPROC:
     return DefWindowProcW(hwnd, msg, wParam, lParam);
 }
 

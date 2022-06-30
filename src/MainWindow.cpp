@@ -33,3 +33,23 @@ HWND CreateMainWindow(HINSTANCE hInstance)
         DispatchMessage(&msg);
     }
  }
+
+ HWND CreateButton(HWND parent, HINSTANCE hInstance, LPCWSTR text, int pane_id, ButtonFunction function)
+ {
+    WORD id = MAKEWORD(UINT8(pane_id), function);
+
+    // create he address text box
+    HWND hwnd = CreateWindowExW(
+          0  // dwExStyle
+        , WC_BUTTON // class name
+        , text // window name
+        , WS_VISIBLE | WS_CHILD // | BS_OWNERDRAW // dwStyle
+        , 0, 0, 0, 0 // x y w h
+        , parent // parent
+        , (HMENU)id // hmenu
+        , hInstance // GetWindowLongPtr(hwnd, GWLP_HINSTANCE)
+        , NULL // lpParam
+    );
+    SetWindowFont(hwnd, GetWindowFont(FilePane_GetFolderBrowserPane()->content.folder.tree->hwnd), NULL);
+    return hwnd;
+ }
