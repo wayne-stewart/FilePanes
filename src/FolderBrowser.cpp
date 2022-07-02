@@ -49,7 +49,7 @@ void Translate(PointF *points, int count, float x, float y)
     }
 }
 
-LRESULT 
+LRESULT CALLBACK
 FolderBrowser_OnCustomDraw(FolderBrowserTree *tree, LPNMTVCUSTOMDRAW pnmtvcd)
 {
     switch (pnmtvcd->nmcd.dwDrawStage)
@@ -73,6 +73,29 @@ FolderBrowser_OnCustomDraw(FolderBrowserTree *tree, LPNMTVCUSTOMDRAW pnmtvcd)
             break;
     }
     return 0;
+}
+
+LRESULT CALLBACK
+FolderBrowser_OnNotify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    LPNMHDR nmhdr = (LPNMHDR)lParam;
+    LPNMTVCUSTOMDRAW pnmtvcd = (LPNMTVCUSTOMDRAW)lParam;
+    FolderBrowserPane *folder_pane = &FilePane_GetFolderBrowserPane()->content.folder;
+    switch (nmhdr->code)
+    {
+        case NM_CUSTOMDRAW: {
+            return FolderBrowser_OnCustomDraw(folder_pane->tree, pnmtvcd);
+        } break;
+        case NM_KILLFOCUS: {
+            folder_pane->tree->focused = false;
+            InvalidateRect(folder_pane->tree->hwnd, NULL, FALSE);
+        } break;
+        case NM_SETFOCUS: {
+            folder_pane->tree->focused = true;
+            InvalidateRect(folder_pane->tree->hwnd, NULL, FALSE);
+        } break;
+    }
+    return DefWindowProcW(hwnd, msg, wParam, lParam);
 }
 
 void 
@@ -174,7 +197,7 @@ FolderBrowser_HitTest(HWND hwnd, POINTS pts, TVITEMW *item, LPWSTR buffer, int b
     return FALSE;
 }
 
-LRESULT 
+LRESULT CALLBACK
 FolderBrowser_SubClassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
 {
     UNREFERENCED_PARAMETER(dwRefData);

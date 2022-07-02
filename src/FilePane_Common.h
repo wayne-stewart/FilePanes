@@ -35,6 +35,10 @@
 // inline expansion. this is fine.
 #pragma warning(disable:4711)
 
+// 5045 is an informative warning that the compiler will insert Spectre mitigations
+// when /Qspecter switch is applied to the cl command. this is fine.
+#pragma warning(disable:5045)
+
 #pragma comment(lib, "user32")
 #pragma comment(lib, "ole32")
 #pragma comment(lib, "shlwapi")
@@ -212,17 +216,17 @@ bool b_block_wm_paint = false;
 
 // UTILITY FUNCTIONS
 
-void Alert(DWORD mb_type, LPCWSTR caption, LPCWSTR format, ...)
+void Alert(LPCWSTR caption, LPCWSTR format, ...)
 {
     va_list args;
     va_start(args, format);
     WCHAR buffer[1024] = {};
     vswprintf(buffer, ARRAYSIZE(buffer), format, args);
     va_end(args);
-    MessageBoxW(NULL, buffer, caption, MB_OK | mb_type);
+    MessageBoxW(NULL, buffer, caption, MB_OK);
 }
 
-#define ASSERT(test, msg_format, ...) if(!(test)) { Alert(MB_ICONERROR, L"Assert Error", msg_format, __VA_ARGS__); }
+#define ASSERT(test, msg_format, ...) if(!(test)) { Alert(L"Assert Error", msg_format, __VA_ARGS__); }
 #define CLAMP(v, min, max) ((v) > (max) ? (max) : ((v) < (min) ? (min) : (v)))
 
 #define BEGIN_ENUM_EXPLORERS for(int i = 0; i < MAX_PANES; i++) { \

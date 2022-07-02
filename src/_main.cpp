@@ -7,9 +7,7 @@
 
 void ComputeLayout(RECT *rc, Pane *pane)
 {
-    //Alert(L"compute layout rc: %d %d %d %d %d %d", rc->left, rc->top, rc->right, rc->bottom, pane->id, pane->content_type);
     if (pane->content_type == PaneType::Container) {
-        //Alert(L"%d %d %d %f", pane->id, rc->left, rc->right, pane->content.container.split);
         RECT rcl, rcr, *split_handle;
         pane->rc = *rc;
         rcl = *rc;
@@ -40,9 +38,7 @@ void ComputeLayout(RECT *rc, Pane *pane)
             split_handle->right = split_handle->left + FRAME_WIDTH;
             split_handle->top = rcl.top;
             split_handle->bottom = rcl.bottom;
-            //Alert(MB_OK, L"alert", L"%d %d %d %d", split_handle->left, split_handle->top, split_handle->right, split_handle->bottom);
         }
-        //Alert(L"%d %d %d %d", rcl.left, rcl.right, rcr.left, rcr.right);
         Pane *lpane = FilePane_GetPaneById(pane->content.container.lpane_id);
         Pane *rpane = FilePane_GetPaneById(pane->content.container.rpane_id);
         ComputeLayout(&rcl, lpane);
@@ -149,33 +145,6 @@ void InitFolderBrowserPane(HWND hwnd, HINSTANCE hInstance, Pane *parent)
     FolderBrowser_FillRoot(tree);
 }
 
-LRESULT 
-SingleLineEdit_SubClassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
-{
-    UNREFERENCED_PARAMETER(dwRefData);
-    UNREFERENCED_PARAMETER(uIdSubclass);
-
-    switch(msg)
-    {
-        case WM_CHAR: {
-            if (wParam == VK_RETURN) {
-                return 0;
-            }
-        } break;
-        case WM_PASTE: {
-            DefSubclassProc(hwnd, msg, wParam, lParam);
-            WCHAR buffer[1024] = {};
-            Edit_GetLine(hwnd, 0, buffer, ARRAYSIZE(buffer));
-            Edit_SetText(hwnd, buffer);
-            return 0;
-        } break;
-        case WM_DESTROY: {
-            RemoveWindowSubclass(hwnd, SingleLineEdit_SubClassProc, IDC_URI);
-        } break;
-    }
-    return DefSubclassProc(hwnd, msg, wParam, lParam);
-}
-
 Pane* InitExplorerBrowserPane(HWND hwnd, HINSTANCE hInstance, Pane *parent)
 {
     ASSERT(parent!=NULL&&parent->content_type==PaneType::Container,L"Explorer Parent must be a container!");
@@ -210,20 +179,8 @@ Pane* InitExplorerBrowserPane(HWND hwnd, HINSTANCE hInstance, Pane *parent)
     parent->content.container.rpane_id = pane->id;
     browser_events->SetPaneId(pane->id);
 
-    // create he address text box
-    pane->content.explorer.txt_uri = CreateWindowExW(
-          0  // dwExStyle
-        , WC_EDITW // class name
-        , NULL // window name
-        , WS_VISIBLE | WS_CHILD | ES_LEFT | ES_AUTOHSCROLL | ES_MULTILINE // dwStyle
-        , 0, 0, 0, 0 // x y w h
-        , hwnd // parent
-        , NULL // hmenu
-        , hInstance // GetWindowLongPtr(hwnd, GWLP_HINSTANCE)
-        , NULL // lpParam
-    );
-    SetWindowFont(pane->content.explorer.txt_uri, GetWindowFont(FilePane_GetFolderBrowserPane()->content.folder.tree->hwnd), NULL);
-    SetWindowSubclass(pane->content.explorer.txt_uri, SingleLineEdit_SubClassProc, IDC_URI, NULL);
+    // create the address text box
+    pane->content.explorer.txt_uri = CreateTextBox(hwnd, hInstance);
 
     pane->content.explorer.btn_split_horizontal = CreateButton(hwnd, hInstance, L"H", pane->id, ButtonFunction::SplitHorizontal);
     pane->content.explorer.btn_split_vertical = CreateButton(hwnd, hInstance, L"V", pane->id, ButtonFunction::SplitVertical);
@@ -334,7 +291,6 @@ int PreDispatch_OnMouseMove(HWND hwnd, MSG *msg)
             }
             else {
                 pane->content.container.split = CLAMP(float(pt.x) / float((rc.right - rc.left)), 0.0f, 1.0f);
-                //Alert(MB_OK, L"move", L"split %f", pane->content.container.split);
             }
         }
         
@@ -409,7 +365,8 @@ int PreDispatchMessage(HWND hwnd, MSG *msg)
     return 1;
 }
 
-LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+LRESULT CALLBACK 
+WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     switch(msg)
     {
@@ -422,32 +379,14 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
         case WM_SETCURSOR:
             if (g_dragging_split_handle) return 1;
             break;
-        case WM_CTLCOLORBTN: {
-            //HDC hdc = (HDC)wParam;
-            return (LRESULT)GetSysColorBrush(WHITE_BRUSH);
-        } break;
         case WM_NOTIFY: {
             LPNMHDR nmhdr = (LPNMHDR)lParam;
-            switch(nmhdr->idFrom)
-            {
-                case IDC_FOLDERBROWSER: {
-                    FolderBrowserPane *folder_pane = &FilePane_GetFolderBrowserPane()->content.folder;
-                    switch (nmhdr->code)
-                    {
-                        case NM_CUSTOMDRAW: {
-                            return FolderBrowser_OnCustomDraw(folder_pane->tree, (LPNMTVCUSTOMDRAW)nmhdr);
-                        } break;
-                        case NM_KILLFOCUS: {
-                            folder_pane->tree->focused = false;
-                            InvalidateRect(folder_pane->tree->hwnd, NULL, FALSE);
-                        } break;
-                        case NM_SETFOCUS: {
-                            folder_pane->tree->focused = true;
-                            InvalidateRect(folder_pane->tree->hwnd, NULL, FALSE);
-                        } break;
-                    }
-                } break;
-            }
+
+            if (nmhdr->idFrom == IDC_FOLDERBROWSER)
+                return FolderBrowser_OnNotify(hwnd, msg, wParam, lParam);
+            
+
+
         } break;
         case WM_PAINT: {
             PAINTSTRUCT ps;
@@ -480,10 +419,10 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 case BN_CLICKED: {
                     ButtonFunction function = (ButtonFunction)HIBYTE(ctl_id);
                     if (function == ButtonFunction::SplitHorizontal) {
-                        Alert(MB_OK, L"button click", L"split horizontal");
+                        Alert(L"button click", L"split horizontal");
                     }
                     else if (function == ButtonFunction::SplitVertical) {
-                        Alert(MB_OK, L"button click", L"split vertical");
+                        Alert(L"button click", L"split vertical");
                     }
                 } break;
             }
@@ -493,7 +432,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
     return DefWindowProcW(hwnd, msg, wParam, lParam);
 }
 
-int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
+int WINAPI 
+wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
 {
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(pCmdLine);
