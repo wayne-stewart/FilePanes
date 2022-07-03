@@ -3,8 +3,7 @@ Multi-Paned File Explorer
 
 The goal of this project is to create a multi-paned file explorer using the windows shell apis to maintain maximum compatibility users know and love with the default file explorer.
 
-
-# Primary TODO
+# TODO
 - [x] add button tool tips
 - [ ] add back button
 - [ ] add up directiory button
@@ -18,8 +17,9 @@ The goal of this project is to create a multi-paned file explorer using the wind
 - [ ] add item view options: list, details, icons 
 - [x] make a better app icon
 - [ ] add paste/copy/delete/new folder buttons
-
-# Secondary TODO
+- [ ] new pane after split should be same directory of pane being split
+- [ ] hide buttons if they don't fit in pane width
+- [ ] add drop down to expose more buttons ( kins of like a ribbon? )
 - [ ] save network login information for future use and integrate with the explorer browser control. Is this possible?
 - [ ] implement clean update strategy based on github releases?
 - [ ] add preview pane
