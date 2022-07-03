@@ -221,7 +221,9 @@ void SplitPane(Pane *explorer_pane, SplitType split_type, SplitDirection split_d
         parent_container_pane->content.container.rpane_id = container_pane->id;
     }
 
-    InitExplorerBrowserPane(g_main_window_hwnd, g_hinstance, container_pane);
+    Pane *pane = InitExplorerBrowserPane(g_main_window_hwnd, g_hinstance, container_pane);
+    
+    FilePane_SetFocus(pane->id);
 }
 
 POINT GetPoint(HWND hwnd, MSG *msg)
