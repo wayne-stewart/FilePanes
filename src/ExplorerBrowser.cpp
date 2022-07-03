@@ -63,6 +63,7 @@ IFACEMETHODIMP ExplorerBrowserEvents::OnNavigationComplete(PCIDLIST_ABSOLUTE pid
     SHGetPathFromIDListW(pidlFolder, buffer);
     ExplorerBrowserPane *pane = &FilePane_GetExplorerPaneById(_pane_id)->content.explorer;
     SetWindowTextW(pane->txt_path, buffer);
+    SendMessageW(pane->txt_path, EM_SETCARETINDEX, (WPARAM)ARRAYSIZE(buffer), NULL);
     return E_NOTIMPL;
 }
 
@@ -70,3 +71,18 @@ IFACEMETHODIMP ExplorerBrowserEvents::OnNavigationFailed(PCIDLIST_ABSOLUTE /* pi
 {
     return E_NOTIMPL;
 }
+
+void ExplorerBrowser_SetPath(LPCWSTR path, Pane *pane)
+{
+    if (pane == NULL || pane->content_type != PaneType::ExplorerBrowser) return;
+
+    LPITEMIDLIST pidl;
+    HRESULT hr = SHParseDisplayName(path, NULL, &pidl, NULL, NULL);
+    if (SUCCEEDED(hr))
+    {
+        pane->content.explorer.browser->BrowseToIDList(pidl, SBSP_ABSOLUTE);
+        CoTaskMemFree(pidl);
+    }
+}
+
+

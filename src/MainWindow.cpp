@@ -178,6 +178,10 @@ TextBox_SubClassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR
     {
         case WM_CHAR: {
             if (wParam == VK_RETURN) {
+                Pane *pane = FilePane_GetPaneById((int)dwRefData);
+                WCHAR buffer[1024] = {};
+                Edit_GetText(hwnd, buffer, ARRAYSIZE(buffer));
+                ExplorerBrowser_SetPath(buffer, pane);
                 return 0;
             }
         } break;
@@ -195,7 +199,7 @@ TextBox_SubClassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR
     return DefSubclassProc(hwnd, msg, wParam, lParam);
 }
 
-HWND CreateTextBox(HWND parent, HINSTANCE hInstance)
+HWND CreateTextBox(HWND parent, HINSTANCE hInstance, int pane_id)
 {
     HWND hwnd = CreateWindowExW(
           0  // dwExStyle
@@ -209,7 +213,7 @@ HWND CreateTextBox(HWND parent, HINSTANCE hInstance)
         , NULL // lpParam
     );
     SetWindowFont(hwnd, GetWindowFont(FilePane_GetFolderBrowserPane()->content.folder.tree->hwnd), NULL);
-    SetWindowSubclass(hwnd, TextBox_SubClassProc, IDC_URI, NULL);
+    SetWindowSubclass(hwnd, TextBox_SubClassProc, IDC_URI, (DWORD_PTR)pane_id);
     return hwnd;
 }
 

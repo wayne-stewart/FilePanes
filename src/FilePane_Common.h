@@ -196,6 +196,7 @@ void RunMainWindowLoop();
 void RunMainWindowLoopWhileMessagesExist();
 void FolderBrowser_OnItemPaint(FolderBrowserTree *tree, LPNMTVCUSTOMDRAW nmtvcd);
 void FolderBrowser_FillItem(FolderBrowserTree *tree, TVITEMW *parent);
+void ExplorerBrowser_SetPath(LPCWSTR path, Pane *pane);
 void SplitPane(Pane *explorer_pane, SplitType split_type, SplitDirection split_direction, float split_value);
 void ComputeLayout(HWND hwnd);
 

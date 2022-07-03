@@ -1,14 +1,6 @@
 
 #include "FilePane_Common.h"
 
-void SetExplorerBrowserPath(LPWSTR path, IExplorerBrowser *browser)
-{
-    LPITEMIDLIST pidl;
-    SHParseDisplayName(path, NULL, &pidl, NULL, NULL);
-    browser->BrowseToIDList(pidl, SBSP_ABSOLUTE);
-    CoTaskMemFree(pidl);
-}
-
 LRESULT CALLBACK
 FolderBrowser_OnCustomDraw(FolderBrowserTree *tree, LPNMTVCUSTOMDRAW pnmtvcd)
 {
@@ -202,13 +194,13 @@ FolderBrowser_SubClassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UI
                         }
                         else
                         {
-                            SetExplorerBrowserPath(data->path, explorer_pane->content.explorer.browser);
+                            ExplorerBrowser_SetPath(data->path, explorer_pane);
                         }
                     }
                 }
                 else
                 {
-                    SetExplorerBrowserPath(data->path, explorer_pane->content.explorer.browser);
+                    ExplorerBrowser_SetPath(data->path, explorer_pane);
                 }
                 // prevent default behavior by returning  here
                 //return 1;

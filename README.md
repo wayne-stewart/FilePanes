@@ -7,7 +7,7 @@ The goal of this project is to create a multi-paned file explorer using the wind
 - [x] add button tool tips
 - [ ] add back button
 - [ ] add up directiory button
-- [ ] go to folder on enter in address bar
+- [x] go to folder on enter in address bar
 - [ ] add refresh button
 - [x] add horizontal split button
 - [x] add vertical split button
