@@ -9,46 +9,6 @@ void SetExplorerBrowserPath(LPWSTR path, IExplorerBrowser *browser)
     CoTaskMemFree(pidl);
 }
 
-float GetHeight(PointF *points, int count)
-{
-    float max = 0;
-    for(int i = 0; i < count; i++) {
-        if (points[i].Y > max) {
-            max = points[i].Y;
-        }
-    }
-    return max;
-}
-
-float GetWidth(PointF *points, int count)
-{
-    float max = 0;
-    for(int i = 0; i < count; i++) {
-        if (points[i].X > max) {
-            max = points[i].X;
-        }
-    }
-    return max;
-}
-
-void Scale(PointF *points, int count, float scale)
-{
-    for(int i = 0; i < count; i++)
-    {
-        points[i].X *= scale;
-        points[i].Y *= scale;
-    }
-}
-
-void Translate(PointF *points, int count, float x, float y)
-{
-    for(int i = 0; i < count; i++)
-    {
-        points[i].X += x;
-        points[i].Y += y;
-    }
-}
-
 LRESULT CALLBACK
 FolderBrowser_OnCustomDraw(FolderBrowserTree *tree, LPNMTVCUSTOMDRAW pnmtvcd)
 {

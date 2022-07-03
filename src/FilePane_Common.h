@@ -190,8 +190,12 @@ void RunMainWindowLoop();
 void RunMainWindowLoopWhileMessagesExist();
 void FolderBrowser_OnItemPaint(FolderBrowserTree *tree, LPNMTVCUSTOMDRAW nmtvcd);
 void FolderBrowser_FillItem(FolderBrowserTree *tree, TVITEMW *parent);
+void SplitPane(Pane *explorer_pane, SplitType split_type, SplitDirection split_direction, float split_value);
+void ComputeLayout(HWND hwnd);
 
 /// GLOBAL STATE
+HWND g_main_window_hwnd;
+HINSTANCE g_hinstance;
 
 #define MAX_PANES 50
 int g_panes_count = 0;
@@ -206,6 +210,62 @@ PointF g_right_arrow_points[6] = {
     ,{0,1}
 };
 
+PointF g_vertical_split_points[8+4+8] = {
+    // left bracket
+     {0,0}
+    ,{2,0}
+    ,{2,1}
+    ,{1,1}
+    ,{1,5}
+    ,{2,5}
+    ,{2,6}
+    ,{0,6}
+
+    // center line
+    ,{2.5,0}
+    ,{3.3f,0}
+    ,{3.3f,6}
+    ,{2.5,6}
+
+    // right bracket
+    ,{4,0}
+    ,{6,0}
+    ,{6,6}
+    ,{4,6}
+    ,{4,5}
+    ,{5,5}
+    ,{5,1}
+    ,{4,1}
+};
+
+PointF g_horizontal_split_points[8+4+8] = {
+    // top bracket
+     {0,0}
+    ,{6,0}
+    ,{6,2}
+    ,{5,2}
+    ,{5,1}
+    ,{1,1}
+    ,{1,2}
+    ,{0,2}
+
+    // center line
+    ,{0,2.5}
+    ,{6,2.5}
+    ,{6,3.3f}
+    ,{0,3.3f}
+
+    // bottom bracket
+    ,{0,4}
+    ,{1,4}
+    ,{1,5}
+    ,{5,5}
+    ,{5,4}
+    ,{6,4}
+    ,{6,6}
+    ,{0,6}
+};
+
 HCURSOR g_idc_sizewe;
 HCURSOR g_idc_sizens;
 HCURSOR g_idc_arrow;
@@ -216,17 +276,19 @@ bool b_block_wm_paint = false;
 
 // UTILITY FUNCTIONS
 
-void Alert(LPCWSTR caption, LPCWSTR format, ...)
+void Alert(UINT type, LPCWSTR caption, LPCWSTR format, ...)
 {
     va_list args;
     va_start(args, format);
     WCHAR buffer[1024] = {};
     vswprintf(buffer, ARRAYSIZE(buffer), format, args);
     va_end(args);
-    MessageBoxW(NULL, buffer, caption, MB_OK);
+    MessageBoxW(NULL, buffer, caption, MB_OK | type);
 }
 
-#define ASSERT(test, msg_format, ...) if(!(test)) { Alert(L"Assert Error", msg_format, __VA_ARGS__); }
+#define DEBUGALERT(msg_format, ...) Alert(MB_ICONINFORMATION, L"Debug Alert", msg_format, __VA_ARGS__)
+
+#define ASSERT(test, msg_format, ...) if(!(test)) { Alert(MB_ICONERROR, L"Assert Error", msg_format, __VA_ARGS__); }
 #define CLAMP(v, min, max) ((v) > (max) ? (max) : ((v) < (min) ? (min) : (v)))
 
 #define BEGIN_ENUM_EXPLORERS for(int i = 0; i < MAX_PANES; i++) { \
@@ -358,6 +420,67 @@ Pane* FilePane_GetExplorerPaneByPt(POINT pt)
     if (PtInRect(&pane->rc, pt)) return pane;
     END_ENUM_EXPLORERS
     return NULL;
+}
+
+float GetHeight(PointF *points, int count)
+{
+    float max = 0;
+    for(int i = 0; i < count; i++) {
+        if (points[i].Y > max) {
+            max = points[i].Y;
+        }
+    }
+    return max;
+}
+
+float GetWidth(PointF *points, int count)
+{
+    float max = 0;
+    for(int i = 0; i < count; i++) {
+        if (points[i].X > max) {
+            max = points[i].X;
+        }
+    }
+    return max;
+}
+
+void Scale(PointF *points, int count, float scale)
+{
+    for(int i = 0; i < count; i++)
+    {
+        points[i].X *= scale;
+        points[i].Y *= scale;
+    }
+}
+
+void Translate(PointF *points, int count, float x, float y)
+{
+    for(int i = 0; i < count; i++)
+    {
+        points[i].X += x;
+        points[i].Y += y;
+    }
+}
+
+struct mat2x2 {
+    float col1[2];
+    float col2[2];
+};
+
+void matmul(PointF *point, mat2x2 *mat)
+{
+    float x = point->X;
+    float y = point->Y;
+    point->X = x*mat->col1[0] + y*mat->col1[1];
+    point->Y = x*mat->col2[0] + y*mat->col2[1];
+}
+
+void Rotate90(PointF *points, int count)
+{
+    mat2x2 mat = { 0.0f, 1.0f, -1.0f, 0.0f };
+    for (int i = 0; i < count; i++) {
+        matmul(&points[i], &mat);
+    }
 }
 
 #endif

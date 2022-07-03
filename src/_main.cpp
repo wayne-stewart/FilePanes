@@ -194,7 +194,7 @@ Pane* InitExplorerBrowserPane(HWND hwnd, HINSTANCE hInstance, Pane *parent)
     return pane;
 }
 
-void SplitPane(HWND hwnd, HINSTANCE hInstance, Pane *explorer_pane, SplitType split_type, SplitDirection split_direction, float split_value)
+void SplitPane(Pane *explorer_pane, SplitType split_type, SplitDirection split_direction, float split_value)
 {
     ASSERT(explorer_pane!=NULL&&explorer_pane->content_type==PaneType::ExplorerBrowser, L"Only split explorer panes!");
 
@@ -203,6 +203,8 @@ void SplitPane(HWND hwnd, HINSTANCE hInstance, Pane *explorer_pane, SplitType sp
     ASSERT(parent_container_pane->content_type==PaneType::Container, L"Parent of explorer was not a container!");
 
     Pane *container_pane = FilePane_AllocatePane();
+    if (container_pane == NULL) return;
+    
     container_pane->content_type = PaneType::Container;
     container_pane->content.container.split_type = split_type;
     container_pane->content.container.split_direction = split_direction;
@@ -218,7 +220,7 @@ void SplitPane(HWND hwnd, HINSTANCE hInstance, Pane *explorer_pane, SplitType sp
         parent_container_pane->content.container.rpane_id = container_pane->id;
     }
 
-    InitExplorerBrowserPane(hwnd, hInstance, container_pane);
+    InitExplorerBrowserPane(g_main_window_hwnd, g_hinstance, container_pane);
 }
 
 POINT GetPoint(HWND hwnd, MSG *msg)
@@ -385,7 +387,8 @@ WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             if (nmhdr->idFrom == IDC_FOLDERBROWSER)
                 return FolderBrowser_OnNotify(hwnd, msg, wParam, lParam);
             
-
+            if (nmhdr->idFrom == IDC_BUTTON)
+                return Button_OnNotify(hwnd, msg, wParam, lParam);
 
         } break;
         case WM_PAINT: {
@@ -410,23 +413,26 @@ WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             DeleteObject(inactive_brush);
             EndPaint(hwnd, &ps);
         } break;
-        case WM_COMMAND: {
-            USHORT ctl_id = LOWORD(wParam);
-            USHORT code = HIWORD(wParam);
-            //HWND ctl_handle = (HWND)lParam;
-            switch(code)
-            {
-                case BN_CLICKED: {
-                    ButtonFunction function = (ButtonFunction)HIBYTE(ctl_id);
-                    if (function == ButtonFunction::SplitHorizontal) {
-                        Alert(L"button click", L"split horizontal");
-                    }
-                    else if (function == ButtonFunction::SplitVertical) {
-                        Alert(L"button click", L"split vertical");
-                    }
-                } break;
-            }
-        } break;
+        // case WM_COMMAND: {
+        //     USHORT ctl_id = LOWORD(wParam);
+        //     USHORT code = HIWORD(wParam);
+        //     //HWND ctl_handle = (HWND)lParam;
+        //     switch(code)
+        //     {
+        //         case BN_CLICKED: {
+        //             DEBUGALERT(L"clicked");
+        //             // int pane_id = (int)LOBYTE(ctl_id);
+        //             // UNREFERENCED_PARAMETER(pane_id);
+        //             // ButtonFunction function = (ButtonFunction)HIBYTE(ctl_id);
+        //             // if (function == ButtonFunction::SplitHorizontal) {
+        //             //     DEBUGALERT(L"split horizontal");
+        //             // }
+        //             // else if (function == ButtonFunction::SplitVertical) {
+        //             //     DEBUGALERT(L"split vertical");
+        //             // }
+        //         } break;
+        //     }
+        // } break;
     }
 
     return DefWindowProcW(hwnd, msg, wParam, lParam);
@@ -452,6 +458,11 @@ wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdS
     Gdiplus::GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
 
     Scale(g_right_arrow_points, ARRAYSIZE(g_right_arrow_points), 10.0f/6.0f);
+    Scale(g_vertical_split_points, ARRAYSIZE(g_vertical_split_points), 18.0f/6.0f);
+    Scale(g_horizontal_split_points, ARRAYSIZE(g_horizontal_split_points), 18.0f/6.0f);
+    // memcpy(g_horizontal_split_points, g_vertical_split_points, ARRAYSIZE(g_vertical_split_points));
+    // Translate(g_horizontal_split_points, ARRAYSIZE(g_horizontal_split_points), 0, 0);
+    // Rotate90(g_horizontal_split_points,  ARRAYSIZE(g_horizontal_split_points));
 
     hwnd = CreateMainWindow(hInstance);
 
@@ -469,10 +480,10 @@ wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdS
 
     Pane *primary_pane = InitContainerPane(hwnd);
     InitFolderBrowserPane(hwnd, hInstance, primary_pane);
-    Pane *ex1 = InitExplorerBrowserPane(hwnd, hInstance, primary_pane);
-    SplitPane(hwnd, hInstance, ex1, SplitType::Float, SplitDirection::Vertical, 0.5);
-    Pane *ex2 = FilePane_GetPaneById(5);
-    SplitPane(hwnd, hInstance, ex2, SplitType::Float, SplitDirection::Horizontal, 0.5);
+    InitExplorerBrowserPane(hwnd, hInstance, primary_pane);
+    // SplitPane(hwnd, hInstance, ex1, SplitType::Float, SplitDirection::Vertical, 0.5);
+    // Pane *ex2 = FilePane_GetPaneById(5);
+    // SplitPane(hwnd, hInstance, ex2, SplitType::Float, SplitDirection::Horizontal, 0.5);
 
     ComputeLayout(hwnd);
 
