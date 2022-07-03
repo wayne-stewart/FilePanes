@@ -5,6 +5,7 @@ The goal of this project is to create a multi-paned file explorer using the wind
 
 
 # Primary TODO
+- [x] add button tool tips
 - [ ] add back button
 - [ ] add up directiory button
 - [ ] go to folder on enter in address bar

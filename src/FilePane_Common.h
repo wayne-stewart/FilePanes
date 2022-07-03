@@ -163,9 +163,12 @@ struct ExplorerBrowserPane {
     ExplorerBrowserEvents *events;
     DWORD event_cookie;
     bool focused;
-    HWND txt_uri;
-    HWND btn_split_horizontal;
-    HWND btn_split_vertical;
+
+    HWND txt_path;
+    HWND btn_split_h;
+    HWND tt_split_h;
+    HWND btn_split_v;
+    HWND tt_split_v;
 };
 
 struct FolderBrowserPane {
@@ -188,6 +191,7 @@ struct Pane {
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 HWND CreateMainWindow(HINSTANCE hInstance);
+HWND CreateToolTip(HWND window, HWND control, LPWSTR text);
 void RunMainWindowLoop();
 void RunMainWindowLoopWhileMessagesExist();
 void FolderBrowser_OnItemPaint(FolderBrowserTree *tree, LPNMTVCUSTOMDRAW nmtvcd);
@@ -366,9 +370,11 @@ void FilePane_DeallocatePane(Pane *pane)
     if (pane == NULL) return;
     if (pane->content_type == PaneType::ExplorerBrowser) {
         pane->content.explorer.browser->Destroy();
-        DestroyWindow(pane->content.explorer.txt_uri);
-        DestroyWindow(pane->content.explorer.btn_split_horizontal);
-        DestroyWindow(pane->content.explorer.btn_split_vertical);
+        DestroyWindow(pane->content.explorer.txt_path);
+        DestroyWindow(pane->content.explorer.btn_split_h);
+        DestroyWindow(pane->content.explorer.tt_split_h);
+        DestroyWindow(pane->content.explorer.btn_split_v);
+        DestroyWindow(pane->content.explorer.tt_split_v);
     }
     else if(pane->content_type == PaneType::FolderBrowser) {
         CloseHandle(pane->content.folder.tree->hwnd);

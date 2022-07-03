@@ -53,20 +53,20 @@ void ComputeLayout(RECT *rc, Pane *pane)
         pos.top = pane->rc.top;
         pos.right = pane->rc.right - 60;
         pos.bottom = pane->rc.top + 30;
-        SetWindowPos(pane->content.explorer.txt_uri, NULL,
+        SetWindowPos(pane->content.explorer.txt_path, NULL,
             pos.left, pos.top, pos.right - pos.left, pos.bottom - pos.top, NULL);
         RECT offset = pos;
         OffsetRect(&offset, -pos.left + 5, -pos.top + 5);
-        Edit_SetRect(pane->content.explorer.txt_uri, &offset);
+        Edit_SetRect(pane->content.explorer.txt_path, &offset);
 
         pos.left = pos.right;
         pos.right += 30;
-        SetWindowPos(pane->content.explorer.btn_split_horizontal, NULL,
+        SetWindowPos(pane->content.explorer.btn_split_h, NULL,
             pos.left, pos.top, pos.right - pos.left, pos.bottom - pos.top, NULL);
 
         pos.left = pos.right;
         pos.right += 30;
-        SetWindowPos(pane->content.explorer.btn_split_vertical, NULL,
+        SetWindowPos(pane->content.explorer.btn_split_v, NULL,
             pos.left, pos.top, pos.right - pos.left, pos.bottom - pos.top, NULL);
 
         pos.left = pane->rc.left;
@@ -180,10 +180,12 @@ Pane* InitExplorerBrowserPane(HWND hwnd, HINSTANCE hInstance, Pane *parent)
     browser_events->SetPaneId(pane->id);
 
     // create the address text box
-    pane->content.explorer.txt_uri = CreateTextBox(hwnd, hInstance);
+    pane->content.explorer.txt_path = CreateTextBox(hwnd, hInstance);
 
-    pane->content.explorer.btn_split_horizontal = CreateButton(hwnd, hInstance, L"H", pane->id, ButtonFunction::SplitHorizontal);
-    pane->content.explorer.btn_split_vertical = CreateButton(hwnd, hInstance, L"V", pane->id, ButtonFunction::SplitVertical);
+    pane->content.explorer.btn_split_h = CreateButton(hwnd, hInstance, L"Split Horizontal", pane->id, ButtonFunction::SplitHorizontal);
+    pane->content.explorer.tt_split_h = CreateToolTip(g_main_window_hwnd, pane->content.explorer.btn_split_h, L"Split Horizontal");
+    pane->content.explorer.btn_split_v = CreateButton(hwnd, hInstance, L"Split Vertical", pane->id, ButtonFunction::SplitVertical);
+    pane->content.explorer.tt_split_v = CreateToolTip(g_main_window_hwnd, pane->content.explorer.btn_split_v, L"Split Vertical");
 
     // browse to folder location
     IShellFolder *pshf;
@@ -460,9 +462,6 @@ wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdS
     Scale(g_right_arrow_points, ARRAYSIZE(g_right_arrow_points), 10.0f/6.0f);
     Scale(g_vertical_split_points, ARRAYSIZE(g_vertical_split_points), 18.0f/6.0f);
     Scale(g_horizontal_split_points, ARRAYSIZE(g_horizontal_split_points), 18.0f/6.0f);
-    // memcpy(g_horizontal_split_points, g_vertical_split_points, ARRAYSIZE(g_vertical_split_points));
-    // Translate(g_horizontal_split_points, ARRAYSIZE(g_horizontal_split_points), 0, 0);
-    // Rotate90(g_horizontal_split_points,  ARRAYSIZE(g_horizontal_split_points));
 
     hwnd = CreateMainWindow(hInstance);
 

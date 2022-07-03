@@ -129,7 +129,7 @@ Button_OnNotify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
             // unfocus the button
             SetFocus(g_main_window_hwnd);
-            
+
             Pane *pane = FilePane_GetPaneById(pane_id);
             if (function == ButtonFunction::SplitHorizontal) {
                 SplitPane(pane, SplitType::Float, SplitDirection::Horizontal, 0.5);
@@ -194,8 +194,8 @@ TextBox_SubClassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR
     return DefSubclassProc(hwnd, msg, wParam, lParam);
 }
 
- HWND CreateTextBox(HWND parent, HINSTANCE hInstance)
- {
+HWND CreateTextBox(HWND parent, HINSTANCE hInstance)
+{
     HWND hwnd = CreateWindowExW(
           0  // dwExStyle
         , WC_EDITW // class name
@@ -210,4 +210,32 @@ TextBox_SubClassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR
     SetWindowFont(hwnd, GetWindowFont(FilePane_GetFolderBrowserPane()->content.folder.tree->hwnd), NULL);
     SetWindowSubclass(hwnd, TextBox_SubClassProc, IDC_URI, NULL);
     return hwnd;
- }
+}
+
+HWND CreateToolTip(HWND window, HWND control, LPWSTR text)
+{
+    HWND tip = CreateWindowExW(
+        NULL // dwExStyle
+        , TOOLTIPS_CLASS // lpClassName
+        , NULL // lpWindowName
+        , WS_POPUP | TTS_ALWAYSTIP // dwStyle
+        , CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT // x, y, w, h
+        , window // hwndParent
+        , NULL // hMenu
+        , g_hinstance
+        , NULL // lpParam
+    );
+
+    if (tip == NULL) return NULL;
+
+    TOOLINFO info = {};
+    info.cbSize = sizeof(info);
+    info.hwnd = window;
+    info.uFlags = TTF_IDISHWND | TTF_SUBCLASS;
+    info.uId = (UINT_PTR)control;
+    info.lpszText = text;
+    SendMessage(tip, TTM_ADDTOOL, 0, (LPARAM)&info);
+
+    return tip;
+}
+

@@ -62,7 +62,7 @@ IFACEMETHODIMP ExplorerBrowserEvents::OnNavigationComplete(PCIDLIST_ABSOLUTE pid
     WCHAR buffer[1024] = {};
     SHGetPathFromIDListW(pidlFolder, buffer);
     ExplorerBrowserPane *pane = &FilePane_GetExplorerPaneById(_pane_id)->content.explorer;
-    SetWindowTextW(pane->txt_uri, buffer);
+    SetWindowTextW(pane->txt_path, buffer);
     return E_NOTIMPL;
 }
 
