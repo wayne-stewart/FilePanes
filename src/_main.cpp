@@ -179,9 +179,8 @@ Pane* InitExplorerBrowserPane(HWND hwnd, HINSTANCE hInstance, Pane *parent)
     parent->content.container.rpane_id = pane->id;
     browser_events->SetPaneId(pane->id);
 
-    // create the address text box
+    // create pane controls
     pane->content.explorer.txt_path = CreateTextBox(hwnd, hInstance);
-
     pane->content.explorer.btn_split_h = CreateButton(hwnd, hInstance, L"Split Horizontal", pane->id, ButtonFunction::SplitHorizontal);
     pane->content.explorer.tt_split_h = CreateToolTip(g_main_window_hwnd, pane->content.explorer.btn_split_h, L"Split Horizontal");
     pane->content.explorer.btn_split_v = CreateButton(hwnd, hInstance, L"Split Vertical", pane->id, ButtonFunction::SplitVertical);

@@ -138,6 +138,7 @@ Button_OnNotify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 SplitPane(pane, SplitType::Float, SplitDirection::Vertical, 0.5);
             }
             ComputeLayout(g_main_window_hwnd);
+            InvalidateRect(g_main_window_hwnd, NULL, FALSE);
             UpdateWindow(g_main_window_hwnd);
             break;
     }

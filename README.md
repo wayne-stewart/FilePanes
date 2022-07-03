@@ -26,8 +26,8 @@ The goal of this project is to create a multi-paned file explorer using the wind
 - [ ] add console pane
 - [ ] add search
 - [ ] do more to clean up rendering to remove jitter
-   - [ ] double buffering on main window
-   - [ ] double buffering on folder browser
+   - double buffering on main window
+   - double buffering on folder browser
 - [ ] add favorites/quick access
 - [ ] improve address bar
 - [ ] add address bar history
@@ -36,3 +36,5 @@ The goal of this project is to create a multi-paned file explorer using the wind
 - [ ] add batch regx based rename with preview
 - [ ] integrate one drive
 - [ ] integrate iCloud drive
+
+
