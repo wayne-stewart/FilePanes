@@ -56,6 +56,8 @@ using Color = Gdiplus::Color;
 using PointF = Gdiplus::PointF;
 using Font = Gdiplus::Font;
 using RectF = Gdiplus::RectF;
+using Gdiplus::GdiplusShutdown;
+using Gdiplus::GdiplusStartup;
 
 #define IDC_FOLDERBROWSER 1
 #define IDC_URI 2
@@ -365,6 +367,8 @@ void FilePane_DeallocatePane(Pane *pane)
     if (pane->content_type == PaneType::ExplorerBrowser) {
         pane->content.explorer.browser->Destroy();
         DestroyWindow(pane->content.explorer.txt_uri);
+        DestroyWindow(pane->content.explorer.btn_split_horizontal);
+        DestroyWindow(pane->content.explorer.btn_split_vertical);
     }
     else if(pane->content_type == PaneType::FolderBrowser) {
         CloseHandle(pane->content.folder.tree->hwnd);

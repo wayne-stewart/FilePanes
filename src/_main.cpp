@@ -204,7 +204,7 @@ void SplitPane(Pane *explorer_pane, SplitType split_type, SplitDirection split_d
 
     Pane *container_pane = FilePane_AllocatePane();
     if (container_pane == NULL) return;
-    
+
     container_pane->content_type = PaneType::Container;
     container_pane->content.container.split_type = split_type;
     container_pane->content.container.split_direction = split_direction;
@@ -455,7 +455,7 @@ wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdS
     InitCommonControls();
    
     // Initialize GDI+.
-    Gdiplus::GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
+    GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
 
     Scale(g_right_arrow_points, ARRAYSIZE(g_right_arrow_points), 10.0f/6.0f);
     Scale(g_vertical_split_points, ARRAYSIZE(g_vertical_split_points), 18.0f/6.0f);
@@ -481,9 +481,6 @@ wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdS
     Pane *primary_pane = InitContainerPane(hwnd);
     InitFolderBrowserPane(hwnd, hInstance, primary_pane);
     InitExplorerBrowserPane(hwnd, hInstance, primary_pane);
-    // SplitPane(hwnd, hInstance, ex1, SplitType::Float, SplitDirection::Vertical, 0.5);
-    // Pane *ex2 = FilePane_GetPaneById(5);
-    // SplitPane(hwnd, hInstance, ex2, SplitType::Float, SplitDirection::Horizontal, 0.5);
 
     ComputeLayout(hwnd);
 
@@ -501,7 +498,7 @@ wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdS
     // cleanup
     OleUninitialize();
     CoUninitialize();
-    Gdiplus::GdiplusShutdown(gdiplusToken);
+    GdiplusShutdown(gdiplusToken);
 
 
     return 0;
