@@ -39,6 +39,15 @@ HWND CreateMainWindow(HINSTANCE hInstance)
     }
  }
 
+void DrawPointsAsLinePairsCenteredInBox(Graphics *g, Pen *pen, PointF *points, int count, float rcx, float rcy, float rcw, float rch)
+{
+    Center(points, count, rcx, rcy, rcw, rch);
+    g->SetSmoothingMode(Gdiplus::SmoothingMode::SmoothingModeAntiAlias);
+    for (int i = 0; i < count;i+=2) {
+        g->DrawLine(pen, points[i], points[i+1]);
+    }
+}
+
 LRESULT CALLBACK
 Button_OnCustomDraw(LPNMCUSTOMDRAW pnmcd)
 {
@@ -59,9 +68,9 @@ Button_OnCustomDraw(LPNMCUSTOMDRAW pnmcd)
             DeleteObject(brush);
 
             Graphics g(pnmcd->hdc);
-            SolidBrush gbrush(Color(200,200,200));
-            PointF local_points[8+4+8];
-            float w,h,fx,fy,fw,fh;
+            SolidBrush gbrush(Color(150,200,255));
+            Pen pen(&gbrush, 3.0f);
+            float fx,fy,fw,fh;
             fx = (float)pnmcd->rc.left;
             fy = (float)pnmcd->rc.top;
             fw = (float)(pnmcd->rc.right - pnmcd->rc.left);
@@ -72,22 +81,30 @@ Button_OnCustomDraw(LPNMCUSTOMDRAW pnmcd)
             ButtonFunction function = (ButtonFunction)HIBYTE(LOWORD(ref_data));
 
             if (function == ButtonFunction::SplitHorizontal) {
+                PointF local_points[ARRAYSIZE(g_horizontal_split_points)];
                 memcpy(local_points, g_horizontal_split_points, sizeof(g_horizontal_split_points));
-                w = GetWidth(local_points, ARRAYSIZE(local_points));
-                h = GetHeight(local_points, ARRAYSIZE(local_points));
-                Translate(local_points, ARRAYSIZE(local_points), fx + (fw - w)/2.0f, fy + (fh - h)/2.0f);
+                Center(local_points, ARRAYSIZE(local_points), fx, fy, fw, fh);
                 g.FillPolygon(&gbrush, local_points, 8);
                 g.FillPolygon(&gbrush, local_points+8, 4);
                 g.FillPolygon(&gbrush, local_points+8+4, 8);
             }
             else if (function == ButtonFunction::SplitVertical) {
+                PointF local_points[ARRAYSIZE(g_vertical_split_points)];
                 memcpy(local_points, g_vertical_split_points, sizeof(g_vertical_split_points));
-                w = GetWidth(local_points, ARRAYSIZE(local_points));
-                h = GetHeight(local_points, ARRAYSIZE(local_points));
-                Translate(local_points, ARRAYSIZE(local_points), fx + (fw - w)/2.0f, fy + (fh - h)/2.0f);
+                Center(local_points, ARRAYSIZE(local_points), fx, fy, fw, fh);
                 g.FillPolygon(&gbrush, local_points, 8);
                 g.FillPolygon(&gbrush, local_points+8, 4);
                 g.FillPolygon(&gbrush, local_points+8+4, 8);
+            }
+            else if (function == ButtonFunction::Up) {
+                PointF local_points[ARRAYSIZE(g_up_points)];
+                memcpy(local_points, g_up_points, sizeof(g_up_points));
+                DrawPointsAsLinePairsCenteredInBox(&g, &pen, local_points, ARRAYSIZE(local_points), fx, fy, fw, fh);
+            }
+            else if (function == ButtonFunction::Back) {
+                PointF local_points[ARRAYSIZE(g_up_points)];
+                memcpy(local_points, g_back_points, sizeof(g_back_points));
+                DrawPointsAsLinePairsCenteredInBox(&g, &pen, local_points, ARRAYSIZE(local_points), fx, fy, fw, fh);
             }
 
             return CDRF_SKIPDEFAULT;
@@ -131,15 +148,26 @@ Button_OnNotify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             SetFocus(g_main_window_hwnd);
 
             Pane *pane = FilePane_GetPaneById(pane_id);
+
             if (function == ButtonFunction::SplitHorizontal) {
                 SplitPane(pane, SplitType::Float, SplitDirection::Horizontal, 0.5);
+                ComputeLayout(g_main_window_hwnd);
+                InvalidateRect(g_main_window_hwnd, NULL, FALSE);
+                UpdateWindow(g_main_window_hwnd);
             }
             else if (function == ButtonFunction::SplitVertical) {
                 SplitPane(pane, SplitType::Float, SplitDirection::Vertical, 0.5);
+                ComputeLayout(g_main_window_hwnd);
+                InvalidateRect(g_main_window_hwnd, NULL, FALSE);
+                UpdateWindow(g_main_window_hwnd);
             }
-            ComputeLayout(g_main_window_hwnd);
-            InvalidateRect(g_main_window_hwnd, NULL, FALSE);
-            UpdateWindow(g_main_window_hwnd);
+            else if (function == ButtonFunction::Back) {
+                pane->content.explorer.browser->BrowseToIDList(NULL, SBSP_NAVIGATEBACK);
+            }
+            else if (function == ButtonFunction::Up) {
+                pane->content.explorer.browser->BrowseToIDList(NULL, SBSP_PARENT);
+            }
+
             break;
     }
 

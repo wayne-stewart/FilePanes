@@ -5,6 +5,11 @@
 #include "FolderBrowser.cpp"
 #include "ExplorerBrowser.cpp"
 
+inline void Position(HWND hwnd, RECT *rc)
+{
+    SetWindowPos(hwnd, NULL, rc->left, rc->top, rc->right - rc->left, rc->bottom - rc->top, NULL);
+}
+
 void ComputeLayout(RECT *rc, Pane *pane)
 {
     if (pane->content_type == PaneType::Container) {
@@ -48,26 +53,34 @@ void ComputeLayout(RECT *rc, Pane *pane)
         pane->rc = *rc;
         SHRINK_RECT(pane->rc, HALF_FRAME_WIDTH);
         
-        RECT pos;
+        int button_dim = 30;
+
+        RECT pos, offset;
         pos.left = pane->rc.left;
         pos.top = pane->rc.top;
-        pos.right = pane->rc.right - 60;
-        pos.bottom = pane->rc.top + 30;
-        SetWindowPos(pane->content.explorer.txt_path, NULL,
-            pos.left, pos.top, pos.right - pos.left, pos.bottom - pos.top, NULL);
-        RECT offset = pos;
+
+        pos.right = pos.left + button_dim;
+        pos.bottom = pane->rc.top + button_dim;
+        Position(pane->content.explorer.btn_back, &pos);
+
+        pos.left = pos.right;
+        pos.right += button_dim;
+        Position(pane->content.explorer.btn_up, &pos);
+
+        pos.left = pos.right;
+        pos.right = pane->rc.right - (2*button_dim);
+        Position(pane->content.explorer.txt_path, &pos);
+        offset = pos;
         OffsetRect(&offset, -pos.left + 5, -pos.top + 5);
         Edit_SetRect(pane->content.explorer.txt_path, &offset);
 
         pos.left = pos.right;
-        pos.right += 30;
-        SetWindowPos(pane->content.explorer.btn_split_h, NULL,
-            pos.left, pos.top, pos.right - pos.left, pos.bottom - pos.top, NULL);
+        pos.right += button_dim;
+        Position(pane->content.explorer.btn_split_h, &pos);
 
         pos.left = pos.right;
-        pos.right += 30;
-        SetWindowPos(pane->content.explorer.btn_split_v, NULL,
-            pos.left, pos.top, pos.right - pos.left, pos.bottom - pos.top, NULL);
+        pos.right += button_dim;
+        Position(pane->content.explorer.btn_split_v, &pos);
 
         pos.left = pane->rc.left;
         pos.right = pane->rc.right;
@@ -77,8 +90,7 @@ void ComputeLayout(RECT *rc, Pane *pane)
     } else if (pane->content_type == PaneType::FolderBrowser) {
         pane->rc = *rc;
         SHRINK_RECT(pane->rc, HALF_FRAME_WIDTH);
-        SetWindowPos(pane->content.folder.tree->hwnd, NULL, 
-            pane->rc.left, pane->rc.top, pane->rc.right - pane->rc.left, pane->rc.bottom - pane->rc.top, NULL);
+        Position(pane->content.folder.tree->hwnd, &pane->rc);
     }
 }
 
@@ -185,6 +197,10 @@ Pane* InitExplorerBrowserPane(HWND hwnd, HINSTANCE hInstance, Pane *parent)
     pane->content.explorer.tt_split_h = CreateToolTip(g_main_window_hwnd, pane->content.explorer.btn_split_h, L"Split Horizontal");
     pane->content.explorer.btn_split_v = CreateButton(hwnd, hInstance, L"Split Vertical", pane->id, ButtonFunction::SplitVertical);
     pane->content.explorer.tt_split_v = CreateToolTip(g_main_window_hwnd, pane->content.explorer.btn_split_v, L"Split Vertical");
+    pane->content.explorer.btn_back = CreateButton(hwnd, hInstance, L"Go Back", pane->id, ButtonFunction::Back);
+    pane->content.explorer.tt_back = CreateToolTip(hwnd, pane->content.explorer.btn_back, L"Go Back");
+    pane->content.explorer.btn_up = CreateButton(hwnd, hInstance, L"Go Up a Directory", pane->id, ButtonFunction::Up);
+    pane->content.explorer.tt_up = CreateToolTip(hwnd, pane->content.explorer.btn_up, L"Go Up a Directory");
 
     // browse to folder location
     IShellFolder *pshf;
@@ -463,6 +479,8 @@ wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdS
     Scale(g_right_arrow_points, ARRAYSIZE(g_right_arrow_points), 10.0f/6.0f);
     Scale(g_vertical_split_points, ARRAYSIZE(g_vertical_split_points), 18.0f/6.0f);
     Scale(g_horizontal_split_points, ARRAYSIZE(g_horizontal_split_points), 18.0f/6.0f);
+    Scale(g_up_points, ARRAYSIZE(g_up_points), 18.0f/6.0f);
+    Scale(g_back_points, ARRAYSIZE(g_back_points), 18.0f/6.0f);
 
     hwnd = CreateMainWindow(hInstance);
 

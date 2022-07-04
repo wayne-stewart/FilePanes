@@ -3,6 +3,20 @@ Multi-Paned File Explorer
 
 The goal of this project is to create a multi-paned file explorer using the windows shell apis to maintain maximum compatibility users know and love with the default file explorer.
 
+
+## v0.1.0 - in progress
+- [x] make a better app icon
+- [x] add button tool tips
+- [x] go to folder on enter in address bar
+- [x] add horizontal split button
+- [x] add vertical split button
+- [x] add back button
+- [x] add up directiory button
+- [ ] add refresh button
+- [ ] add remove pane button
+- [ ] save current state and read last known state on start
+
+
 # TODO
 - [ ] save multiple layout configurations
 - [ ] add item view options: list, details, icons 
@@ -27,17 +41,5 @@ The goal of this project is to create a multi-paned file explorer using the wind
 - [ ] integrate one drive
 - [ ] integrate iCloud drive
 
-
-## v0.1.0 - release in progress
-- [x] make a better app icon
-- [x] add button tool tips
-- [x] go to folder on enter in address bar
-- [x] add horizontal split button
-- [x] add vertical split button
-- [ ] add back button
-- [ ] add up directiory button
-- [ ] add refresh button
-- [ ] add remove pane button
-- [ ] save current state and read last known state on start
 
 

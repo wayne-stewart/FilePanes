@@ -52,6 +52,7 @@
 
 using Graphics = Gdiplus::Graphics;
 using SolidBrush = Gdiplus::SolidBrush;
+using Pen = Gdiplus::Pen;
 using Color = Gdiplus::Color;
 using PointF = Gdiplus::PointF;
 using Font = Gdiplus::Font;
@@ -97,7 +98,9 @@ enum ControlType : UINT8 {
 
 enum ButtonFunction : UINT8 {
     SplitHorizontal = 1,
-    SplitVertical = 2
+    SplitVertical = 2,
+    Back = 3,
+    Up = 4
 };
 
 struct FolderBrowserTree
@@ -169,6 +172,10 @@ struct ExplorerBrowserPane {
     HWND tt_split_h;
     HWND btn_split_v;
     HWND tt_split_v;
+    HWND btn_back;
+    HWND tt_back;
+    HWND btn_up;
+    HWND tt_up;
 };
 
 struct FolderBrowserPane {
@@ -187,6 +194,11 @@ struct Pane {
     RECT rc;
     PaneType content_type;
     _content content;
+};
+
+struct mat2x2 {
+    float col1[2];
+    float col2[2];
 };
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -271,6 +283,24 @@ PointF g_horizontal_split_points[8+4+8] = {
     ,{6,4}
     ,{6,6}
     ,{0,6}
+};
+
+PointF g_back_points[] = {
+     {0,2}
+    ,{6,2}
+    ,{0,2}
+    ,{2.5,0}
+    ,{0,2}
+    ,{2.5,4}
+};
+
+PointF g_up_points[] = {
+     {2,0}
+    ,{2,6}
+    ,{2,0}
+    ,{0,2.5}
+    ,{2,0}
+    ,{4,2.5}
 };
 
 HCURSOR g_idc_sizewe;
@@ -376,6 +406,10 @@ void FilePane_DeallocatePane(Pane *pane)
         DestroyWindow(pane->content.explorer.tt_split_h);
         DestroyWindow(pane->content.explorer.btn_split_v);
         DestroyWindow(pane->content.explorer.tt_split_v);
+        DestroyWindow(pane->content.explorer.btn_back);
+        DestroyWindow(pane->content.explorer.tt_back);
+        DestroyWindow(pane->content.explorer.btn_up);
+        DestroyWindow(pane->content.explorer.tt_up);
     }
     else if(pane->content_type == PaneType::FolderBrowser) {
         CloseHandle(pane->content.folder.tree->hwnd);
@@ -435,24 +469,32 @@ Pane* FilePane_GetExplorerPaneByPt(POINT pt)
 
 float GetHeight(PointF *points, int count)
 {
+    float min = 1e7f;
     float max = 0;
     for(int i = 0; i < count; i++) {
         if (points[i].Y > max) {
             max = points[i].Y;
         }
+        if (points[i].Y < min) {
+            min =  points[i].Y;
+        }
     }
-    return max;
+    return max - min;
 }
 
 float GetWidth(PointF *points, int count)
 {
+    float min = 1e7f;
     float max = 0;
     for(int i = 0; i < count; i++) {
         if (points[i].X > max) {
             max = points[i].X;
         }
+        if (points[i].X < min) {
+            min = points[i].X;
+        }
     }
-    return max;
+    return max - min;
 }
 
 void Scale(PointF *points, int count, float scale)
@@ -473,10 +515,15 @@ void Translate(PointF *points, int count, float x, float y)
     }
 }
 
-struct mat2x2 {
-    float col1[2];
-    float col2[2];
-};
+void Center(PointF *points, int count, float rcx, float rcy, float rcw, float rch)
+{
+    float w = GetWidth(points, count);
+    float h = GetHeight(points, count);
+    //if (count == 2) DEBUGALERT(L"w%f, h%f, rcx%f, rcy%f, rcw%f, rch%f", w, h, rcx, rcy, rcw, rch);
+    //if (count == 2) DEBUGALERT(L"%f, %f, %f, %f", points[0].X, points[0].Y, points[1].X, points[1].Y);
+    Translate(points, count, rcx + (rcw - w)/2.0f, rcy + (rch - h)/2.0f);
+    //if (count == 2) DEBUGALERT(L"%f, %f, %f, %f", points[0].X, points[0].Y, points[1].X, points[1].Y);
+}
 
 void matmul(PointF *point, mat2x2 *mat)
 {
