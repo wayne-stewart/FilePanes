@@ -414,6 +414,8 @@ void FilePane_DeallocatePane(Pane *pane)
         DestroyWindow(pane->content.explorer.tt_back);
         DestroyWindow(pane->content.explorer.btn_up);
         DestroyWindow(pane->content.explorer.tt_up);
+        DestroyWindow(pane->content.explorer.btn_refresh);
+        DestroyWindow(pane->content.explorer.tt_refresh);
     }
     else if(pane->content_type == PaneType::FolderBrowser) {
         CloseHandle(pane->content.folder.tree->hwnd);
