@@ -100,7 +100,9 @@ enum ButtonFunction : UINT8 {
     SplitHorizontal = 1,
     SplitVertical = 2,
     Back = 3,
-    Up = 4
+    Up = 4,
+    Refresh = 5,
+    RemovePane = 6
 };
 
 struct FolderBrowserTree
@@ -176,6 +178,8 @@ struct ExplorerBrowserPane {
     HWND tt_back;
     HWND btn_up;
     HWND tt_up;
+    HWND btn_refresh;
+    HWND tt_refresh;
 };
 
 struct FolderBrowserPane {

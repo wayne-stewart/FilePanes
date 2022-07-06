@@ -68,11 +68,15 @@ void ComputeLayout(RECT *rc, Pane *pane)
         Position(pane->content.explorer.btn_up, &pos);
 
         pos.left = pos.right;
-        pos.right = pane->rc.right - (2*button_dim);
+        pos.right = pane->rc.right - (3*button_dim);
         Position(pane->content.explorer.txt_path, &pos);
         offset = pos;
         OffsetRect(&offset, -pos.left + 5, -pos.top + 5);
         Edit_SetRect(pane->content.explorer.txt_path, &offset);
+
+        pos.left = pos.right;
+        pos.right += button_dim;
+        Position(pane->content.explorer.btn_refresh, &pos);
 
         pos.left = pos.right;
         pos.right += button_dim;
@@ -201,6 +205,8 @@ Pane* InitExplorerBrowserPane(HWND hwnd, HINSTANCE hInstance, Pane *parent)
     pane->content.explorer.tt_back = CreateToolTip(hwnd, pane->content.explorer.btn_back, L"Go Back");
     pane->content.explorer.btn_up = CreateButton(hwnd, hInstance, L"Go Up a Directory", pane->id, ButtonFunction::Up);
     pane->content.explorer.tt_up = CreateToolTip(hwnd, pane->content.explorer.btn_up, L"Go Up a Directory");
+    pane->content.explorer.btn_refresh = CreateButton(hwnd, hInstance, L"Refresh", pane->id, ButtonFunction::Refresh);
+    pane->content.explorer.tt_refresh = CreateToolTip(hwnd, pane->content.explorer.btn_refresh, L"Refresh");
 
     // browse to folder location
     IShellFolder *pshf;

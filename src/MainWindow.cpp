@@ -106,6 +106,13 @@ Button_OnCustomDraw(LPNMCUSTOMDRAW pnmcd)
                 memcpy(local_points, g_back_points, sizeof(g_back_points));
                 DrawPointsAsLinePairsCenteredInBox(&g, &pen, local_points, ARRAYSIZE(local_points), fx, fy, fw, fh);
             }
+            else if (function == ButtonFunction::Refresh) {
+                //RECT
+                g.SetSmoothingMode(Gdiplus::SmoothingMode::SmoothingModeAntiAlias);
+                g.DrawArc(&pen, 6.0f, 6.0f, 16.0f, 16.0f, -60.0f, 290.0f);
+                PointF points[] = { {5.0f, 5.0f}, {13.0f, 13.0f}, {13.0f, 5.0f} };
+                g.FillPolygon(&gbrush, points, ARRAYSIZE(points));
+            }
 
             return CDRF_SKIPDEFAULT;
     }
@@ -166,6 +173,11 @@ Button_OnNotify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             }
             else if (function == ButtonFunction::Up) {
                 pane->content.explorer.browser->BrowseToIDList(NULL, SBSP_PARENT);
+            }
+            else if (function == ButtonFunction::Refresh) {
+                IShellView *ppv;
+                pane->content.explorer.browser->GetCurrentView(IID_IShellView, (void **)&ppv);
+                ppv->Refresh();
             }
 
             break;

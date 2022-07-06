@@ -12,7 +12,7 @@ The goal of this project is to create a multi-paned file explorer using the wind
 - [x] add vertical split button
 - [x] add back button
 - [x] add up directiory button
-- [ ] add refresh button
+- [x] add refresh button
 - [ ] add remove pane button
 - [ ] save current state and read last known state on start
 
