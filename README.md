@@ -18,6 +18,7 @@ The goal of this project is to create a multi-paned file explorer using the wind
 
 
 # TODO
+- [ ] add tool tip to folder explorer items
 - [ ] save multiple layout configurations
 - [ ] add item view options: list, details, icons 
 - [ ] add paste/copy/delete/new folder buttons
