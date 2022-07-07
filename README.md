@@ -13,7 +13,7 @@ The goal of this project is to create a multi-paned file explorer using the wind
 - [x] add back button
 - [x] add up directiory button
 - [x] add refresh button
-- [ ] add remove pane button
+- [x] add remove pane button
 - [ ] save current state and read last known state on start
 
 
@@ -21,6 +21,7 @@ The goal of this project is to create a multi-paned file explorer using the wind
 - [ ] add tool tip to folder explorer items
 - [ ] save multiple layout configurations
 - [ ] add item view options: list, details, icons 
+- [ ] add keyboard shortcuts for explorer pane ctl-a, delete, ctl-x, ctl-c, ctl-v
 - [ ] add paste/copy/delete/new folder buttons
 - [ ] new pane after split should be same directory of pane being split
 - [ ] hide buttons if they don't fit in pane width

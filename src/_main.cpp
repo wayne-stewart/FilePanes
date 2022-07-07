@@ -68,7 +68,7 @@ void ComputeLayout(RECT *rc, Pane *pane)
         Position(pane->content.explorer.btn_up, &pos);
 
         pos.left = pos.right;
-        pos.right = pane->rc.right - (3*button_dim);
+        pos.right = pane->rc.right - (4*button_dim);
         Position(pane->content.explorer.txt_path, &pos);
         offset = pos;
         OffsetRect(&offset, -pos.left + 5, -pos.top + 5);
@@ -85,6 +85,10 @@ void ComputeLayout(RECT *rc, Pane *pane)
         pos.left = pos.right;
         pos.right += button_dim;
         Position(pane->content.explorer.btn_split_v, &pos);
+
+        pos.left = pos.right;
+        pos.right += button_dim;
+        Position(pane->content.explorer.btn_remove, &pos);
 
         pos.left = pane->rc.left;
         pos.right = pane->rc.right;
@@ -207,6 +211,8 @@ Pane* InitExplorerBrowserPane(HWND hwnd, HINSTANCE hInstance, Pane *parent)
     pane->content.explorer.tt_up = CreateToolTip(hwnd, pane->content.explorer.btn_up, L"Go Up a Directory");
     pane->content.explorer.btn_refresh = CreateButton(hwnd, hInstance, L"Refresh", pane->id, ButtonFunction::Refresh);
     pane->content.explorer.tt_refresh = CreateToolTip(hwnd, pane->content.explorer.btn_refresh, L"Refresh");
+    pane->content.explorer.btn_remove = CreateButton(hwnd, hInstance, L"Remove Pane", pane->id, ButtonFunction::Remove);
+    pane->content.explorer.tt_remove = CreateToolTip(hwnd, pane->content.explorer.btn_remove, L"Remove Pane");
 
     // browse to folder location
     IShellFolder *pshf;
@@ -246,6 +252,83 @@ void SplitPane(Pane *explorer_pane, SplitType split_type, SplitDirection split_d
     Pane *pane = InitExplorerBrowserPane(g_main_window_hwnd, g_hinstance, container_pane);
 
     FilePane_SetFocus(pane->id);
+}
+
+void ReplaceParentWithChildOnGrandParent(Pane *grand_parent, Pane *parent, Pane *child)
+{
+    if (grand_parent->content.container.lpane_id == parent->id) {
+        grand_parent->content.container.lpane_id = child->id;
+    }
+    else if (grand_parent->content.container.rpane_id == parent->id) {
+        grand_parent->content.container.rpane_id = child->id;
+    }
+    else {
+        return;
+    }
+
+    child->parent_id = grand_parent->id;
+    if (parent->content.container.lpane_id == child->id) {
+        parent->content.container.lpane_id = NULL;
+    }
+    else if (parent->content.container.rpane_id == child->id) {
+        parent->content.container.rpane_id = NULL;
+    }
+}
+
+void RemovePane(Pane *pane)
+{
+    // bad input to function, just return without doing anything
+    if (pane == NULL) return;
+
+    // only explorer panes can be removed.
+    if (pane->content_type != PaneType::ExplorerBrowser) return;
+
+    // the root pane is always at the 1st index
+    // if the parent is the root, then this is the last explorer pane
+    // never want to remove the last explorer pane
+    if (pane->parent_id == 1) return;
+
+    Pane *parent = NULL, *remaining_pane = NULL, *grand_parent = NULL;
+    parent = FilePane_GetPaneById(pane->parent_id);
+
+    // if the parent was not found or the parent is not a container
+    // just return without doing anything
+    if(parent == NULL || parent->content_type  != PaneType::Container) return;
+
+    grand_parent = FilePane_GetPaneById(parent->parent_id);
+
+    // since we don't support removing explorer directly off the root,
+    // there should always be a grand parent.
+    if (grand_parent == NULL || parent->content_type != PaneType::Container) return;
+
+    if (parent->content.container.lpane_id == pane->id) {
+        remaining_pane = FilePane_GetPaneById(parent->content.container.rpane_id);
+    }
+    else if (parent->content.container.rpane_id == pane->id) {
+        remaining_pane = FilePane_GetPaneById(parent->content.container.lpane_id);
+    }
+    else {
+        // unable to determine which position the pane to be deleted is in...
+        // just return without doing anything
+        return;
+    }
+
+    // could not find the remaining pane, just return without doing anything
+    if (remaining_pane == NULL) return;
+
+    // Panes are organized into a binary tree (not balanced) where containers always have two
+    // children and are considered branch nodes. Leaf nodes are always the folder browser or
+    // explorer panes. Both leaf nodes of a container are always filled. When removing a Leaf
+    // node (explorer pane), also remove the container and set the remaining explorer pane
+    // as child of the container's parent container.
+
+    ReplaceParentWithChildOnGrandParent(grand_parent, parent, remaining_pane);
+
+    // this should deallocate the parent and the removed pane
+    FilePane_DeallocatePane(parent);
+    ASSERT(pane->content_type == PaneType::NotSet, L"removed pane was not deallocated!");
+    ASSERT(parent->content_type == PaneType::NotSet, L"container pane was not deallocated");
+    ASSERT(remaining_pane->parent_id == grand_parent->id, L"remaining pane did not get added to grandparent");
 }
 
 POINT GetPoint(HWND hwnd, MSG *msg)
@@ -487,6 +570,7 @@ wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdS
     Scale(g_horizontal_split_points, ARRAYSIZE(g_horizontal_split_points), 18.0f/6.0f);
     Scale(g_up_points, ARRAYSIZE(g_up_points), 18.0f/6.0f);
     Scale(g_back_points, ARRAYSIZE(g_back_points), 18.0f/6.0f);
+    Scale(g_remove_points, ARRAYSIZE(g_remove_points), 18.0f/6.0f);
 
     hwnd = CreateMainWindow(hInstance);
 

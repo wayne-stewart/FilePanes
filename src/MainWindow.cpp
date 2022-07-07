@@ -113,6 +113,11 @@ Button_OnCustomDraw(LPNMCUSTOMDRAW pnmcd)
                 PointF points[] = { {5.0f, 5.0f}, {13.0f, 13.0f}, {13.0f, 5.0f} };
                 g.FillPolygon(&gbrush, points, ARRAYSIZE(points));
             }
+            else if (function == ButtonFunction::Remove) {
+                PointF local_points[ARRAYSIZE(g_remove_points)];
+                memcpy(local_points, g_remove_points, sizeof(g_remove_points));
+                DrawPointsAsLinePairsCenteredInBox(&g, &pen, local_points, ARRAYSIZE(local_points), fx, fy, fw, fh);
+            }
 
             return CDRF_SKIPDEFAULT;
     }
@@ -178,6 +183,12 @@ Button_OnNotify(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 IShellView *ppv;
                 pane->content.explorer.browser->GetCurrentView(IID_IShellView, (void **)&ppv);
                 ppv->Refresh();
+            }
+            else if (function == ButtonFunction::Remove) {
+                RemovePane(pane);
+                ComputeLayout(g_main_window_hwnd);
+                InvalidateRect(g_main_window_hwnd, NULL, FALSE);
+                UpdateWindow(g_main_window_hwnd);
             }
 
             break;

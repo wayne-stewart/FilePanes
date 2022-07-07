@@ -102,7 +102,7 @@ enum ButtonFunction : UINT8 {
     Back = 3,
     Up = 4,
     Refresh = 5,
-    RemovePane = 6
+    Remove = 6
 };
 
 struct FolderBrowserTree
@@ -180,6 +180,8 @@ struct ExplorerBrowserPane {
     HWND tt_up;
     HWND btn_refresh;
     HWND tt_refresh;
+    HWND btn_remove;
+    HWND tt_remove;
 };
 
 struct FolderBrowserPane {
@@ -214,6 +216,7 @@ void FolderBrowser_OnItemPaint(FolderBrowserTree *tree, LPNMTVCUSTOMDRAW nmtvcd)
 void FolderBrowser_FillItem(FolderBrowserTree *tree, TVITEMW *parent);
 void ExplorerBrowser_SetPath(LPCWSTR path, Pane *pane);
 void SplitPane(Pane *explorer_pane, SplitType split_type, SplitDirection split_direction, float split_value);
+void RemovePane(Pane *pane);
 void ComputeLayout(HWND hwnd);
 
 /// GLOBAL STATE
@@ -305,6 +308,13 @@ PointF g_up_points[] = {
     ,{0,2.5}
     ,{2,0}
     ,{4,2.5}
+};
+
+PointF g_remove_points[] = {
+     {0,0}
+    ,{5,5}
+    ,{5,0}
+    ,{0,5}
 };
 
 HCURSOR g_idc_sizewe;
@@ -416,6 +426,8 @@ void FilePane_DeallocatePane(Pane *pane)
         DestroyWindow(pane->content.explorer.tt_up);
         DestroyWindow(pane->content.explorer.btn_refresh);
         DestroyWindow(pane->content.explorer.tt_refresh);
+        DestroyWindow(pane->content.explorer.btn_remove);
+        DestroyWindow(pane->content.explorer.tt_remove);
     }
     else if(pane->content_type == PaneType::FolderBrowser) {
         CloseHandle(pane->content.folder.tree->hwnd);
@@ -525,10 +537,7 @@ void Center(PointF *points, int count, float rcx, float rcy, float rcw, float rc
 {
     float w = GetWidth(points, count);
     float h = GetHeight(points, count);
-    //if (count == 2) DEBUGALERT(L"w%f, h%f, rcx%f, rcy%f, rcw%f, rch%f", w, h, rcx, rcy, rcw, rch);
-    //if (count == 2) DEBUGALERT(L"%f, %f, %f, %f", points[0].X, points[0].Y, points[1].X, points[1].Y);
     Translate(points, count, rcx + (rcw - w)/2.0f, rcy + (rch - h)/2.0f);
-    //if (count == 2) DEBUGALERT(L"%f, %f, %f, %f", points[0].X, points[0].Y, points[1].X, points[1].Y);
 }
 
 void matmul(PointF *point, mat2x2 *mat)
