@@ -1,9 +1,11 @@
 
 #include "FilePane_Common.h"
 
-#include "MainWindow.cpp"
-#include "FolderBrowser.cpp"
-#include "ExplorerBrowser.cpp"
+#include "FilePane_Window.cpp"
+#include "FilePane_FolderTree.cpp"
+#include "FilePane_Explorer.cpp"
+#include "FilePane_Drawing.cpp"
+#include "FilePane_Panes.cpp"
 
 inline void Position(HWND hwnd, RECT *rc)
 {
@@ -108,227 +110,6 @@ void ComputeLayout(HWND hwnd)
     GetClientRect(hwnd, &rc);
     SHRINK_RECT(rc, HALF_FRAME_WIDTH);
     ComputeLayout(&rc, FilePane_GetRootPane());
-}
-
-void DrawExplorerFrame(Pane *pane, HDC hdc, HBRUSH brush)
-{
-    RECT left, top, right, bottom;
-    
-    left.left = pane->rc.left - FRAME_WIDTH;
-    left.top = pane->rc.top - FRAME_WIDTH;
-    left.right = pane->rc.left;
-    left.bottom = pane->rc.bottom + FRAME_WIDTH;
-
-    top.left = pane->rc.left - FRAME_WIDTH;
-    top.top = pane->rc.top - FRAME_WIDTH;
-    top.right = pane->rc.right + FRAME_WIDTH;
-    top.bottom = pane->rc.top;
-
-    right.left = pane->rc.right;
-    right.top = pane->rc.top - FRAME_WIDTH;
-    right.right = pane->rc.right + FRAME_WIDTH;
-    right.bottom = pane->rc.bottom + FRAME_WIDTH;
-
-    bottom.left = pane->rc.left - FRAME_WIDTH;
-    bottom.top = pane->rc.bottom;
-    bottom.right = pane->rc.right + FRAME_WIDTH;
-    bottom.bottom = pane->rc.bottom + FRAME_WIDTH;
-
-    FillRect(hdc, &left, brush);
-    FillRect(hdc, &top, brush);
-    FillRect(hdc, &right, brush);
-    FillRect(hdc, &bottom, brush);
-}
-
-Pane* InitContainerPane(HWND hwnd)
-{
-    Pane *pane = FilePane_AllocatePane();
-    pane->parent_id = 0;
-    pane->content_type = PaneType::Container;
-    GetClientRect(hwnd, &pane->rc);
-    pane->content.container.split_direction = SplitDirection::Vertical;
-    pane->content.container.split_type = SplitType::Fixed;
-    pane->content.container.split = 200;
-    return pane;
-}
-
-void InitFolderBrowserPane(HWND hwnd, HINSTANCE hInstance, Pane *parent)
-{
-    FolderBrowserTree *tree = (FolderBrowserTree*)calloc(1, sizeof(FolderBrowserTree));
-    Pane *pane = FilePane_AllocatePane();
-    pane->parent_id = parent->id;
-    pane->content_type = PaneType::FolderBrowser;
-    pane->content.folder.tree = tree;
-    parent->content.container.lpane_id = pane->id;
-    RECT rc = {};
-    FolderBrowser_Create(tree, hwnd, hInstance, &rc);
-    FolderBrowser_FillRoot(tree);
-}
-
-Pane* InitExplorerBrowserPane(HWND hwnd, HINSTANCE hInstance, Pane *parent)
-{
-    ASSERT(parent!=NULL&&parent->content_type==PaneType::Container,L"Explorer Parent must be a container!");
-    HRESULT hr;
-
-    // create the com instance for IExplorerBrowser
-    IExplorerBrowser *browser;
-    hr = CoCreateInstance(CLSID_ExplorerBrowser, NULL, CLSCTX_INPROC, IID_PPV_ARGS(&browser));
-    if FAILED(hr) return NULL;
-
-    // initialize the ExplorerBrowser
-    FOLDERSETTINGS fs = {};
-    RECT rc = {};
-    fs.ViewMode = FVM_DETAILS;// FVM_LIST; // FVM_CONTENT; //FVM_ICON; // FVM_DETAILS;
-    fs.fFlags = FWF_NOWEBVIEW; // | FWF_NOCOLUMNHEADER;
-    browser->SetOptions(EBO_NOBORDER | EBO_NOWRAPPERWINDOW);
-    browser->Initialize(hwnd, &rc, &fs);
-
-    // subscribe to events from the explorer window
-    ExplorerBrowserEvents *browser_events = new ExplorerBrowserEvents();
-    DWORD cookie;
-    hr = browser->Advise(browser_events, &cookie);
-    ASSERT(hr==S_OK, L"could not subscribe to IExplorerBrowser events!");
-
-    // create the Pane
-    Pane *pane = FilePane_AllocatePane();
-    pane->parent_id = parent->id;
-    pane->content_type = PaneType::ExplorerBrowser;
-    pane->content.explorer.browser = browser;
-    pane->content.explorer.events = browser_events;
-    pane->content.explorer.event_cookie = cookie;
-    parent->content.container.rpane_id = pane->id;
-    browser_events->SetPaneId(pane->id);
-
-    // create pane controls
-    pane->content.explorer.txt_path = CreateTextBox(hwnd, hInstance, pane->id);
-    pane->content.explorer.btn_split_h = CreateButton(hwnd, hInstance, L"Split Horizontal", pane->id, ButtonFunction::SplitHorizontal);
-    pane->content.explorer.tt_split_h = CreateToolTip(g_main_window_hwnd, pane->content.explorer.btn_split_h, L"Split Horizontal");
-    pane->content.explorer.btn_split_v = CreateButton(hwnd, hInstance, L"Split Vertical", pane->id, ButtonFunction::SplitVertical);
-    pane->content.explorer.tt_split_v = CreateToolTip(g_main_window_hwnd, pane->content.explorer.btn_split_v, L"Split Vertical");
-    pane->content.explorer.btn_back = CreateButton(hwnd, hInstance, L"Go Back", pane->id, ButtonFunction::Back);
-    pane->content.explorer.tt_back = CreateToolTip(hwnd, pane->content.explorer.btn_back, L"Go Back");
-    pane->content.explorer.btn_up = CreateButton(hwnd, hInstance, L"Go Up a Directory", pane->id, ButtonFunction::Up);
-    pane->content.explorer.tt_up = CreateToolTip(hwnd, pane->content.explorer.btn_up, L"Go Up a Directory");
-    pane->content.explorer.btn_refresh = CreateButton(hwnd, hInstance, L"Refresh", pane->id, ButtonFunction::Refresh);
-    pane->content.explorer.tt_refresh = CreateToolTip(hwnd, pane->content.explorer.btn_refresh, L"Refresh");
-    pane->content.explorer.btn_remove = CreateButton(hwnd, hInstance, L"Remove Pane", pane->id, ButtonFunction::Remove);
-    pane->content.explorer.tt_remove = CreateToolTip(hwnd, pane->content.explorer.btn_remove, L"Remove Pane");
-
-    // browse to folder location
-    IShellFolder *pshf;
-    SHGetDesktopFolder(&pshf);
-    browser->BrowseToObject(pshf, NULL);
-    pshf->Release();
-
-    return pane;
-}
-
-void SplitPane(Pane *explorer_pane, SplitType split_type, SplitDirection split_direction, float split_value)
-{
-    ASSERT(explorer_pane!=NULL&&explorer_pane->content_type==PaneType::ExplorerBrowser, L"Only split explorer panes!");
-
-    Pane *parent_container_pane = FilePane_GetPaneById(explorer_pane->parent_id);
-
-    ASSERT(parent_container_pane->content_type==PaneType::Container, L"Parent of explorer was not a container!");
-
-    Pane *container_pane = FilePane_AllocatePane();
-    if (container_pane == NULL) return;
-
-    container_pane->content_type = PaneType::Container;
-    container_pane->content.container.split_type = split_type;
-    container_pane->content.container.split_direction = split_direction;
-    container_pane->content.container.split = split_value;
-    container_pane->content.container.lpane_id = explorer_pane->id;
-    container_pane->parent_id = parent_container_pane->id;
-    explorer_pane->parent_id = container_pane->id;
-
-    if (parent_container_pane->content.container.lpane_id == explorer_pane->id) {
-        parent_container_pane->content.container.lpane_id = container_pane->id;
-    }
-    else if (parent_container_pane->content.container.rpane_id == explorer_pane->id) {
-        parent_container_pane->content.container.rpane_id = container_pane->id;
-    }
-
-    Pane *pane = InitExplorerBrowserPane(g_main_window_hwnd, g_hinstance, container_pane);
-
-    FilePane_SetFocus(pane->id);
-}
-
-void ReplaceParentWithChildOnGrandParent(Pane *grand_parent, Pane *parent, Pane *child)
-{
-    if (grand_parent->content.container.lpane_id == parent->id) {
-        grand_parent->content.container.lpane_id = child->id;
-    }
-    else if (grand_parent->content.container.rpane_id == parent->id) {
-        grand_parent->content.container.rpane_id = child->id;
-    }
-    else {
-        return;
-    }
-
-    child->parent_id = grand_parent->id;
-    if (parent->content.container.lpane_id == child->id) {
-        parent->content.container.lpane_id = NULL;
-    }
-    else if (parent->content.container.rpane_id == child->id) {
-        parent->content.container.rpane_id = NULL;
-    }
-}
-
-void RemovePane(Pane *pane)
-{
-    // bad input to function, just return without doing anything
-    if (pane == NULL) return;
-
-    // only explorer panes can be removed.
-    if (pane->content_type != PaneType::ExplorerBrowser) return;
-
-    // the root pane is always at the 1st index
-    // if the parent is the root, then this is the last explorer pane
-    // never want to remove the last explorer pane
-    if (pane->parent_id == 1) return;
-
-    Pane *parent = NULL, *remaining_pane = NULL, *grand_parent = NULL;
-    parent = FilePane_GetPaneById(pane->parent_id);
-
-    // if the parent was not found or the parent is not a container
-    // just return without doing anything
-    if(parent == NULL || parent->content_type  != PaneType::Container) return;
-
-    grand_parent = FilePane_GetPaneById(parent->parent_id);
-
-    // since we don't support removing explorer directly off the root,
-    // there should always be a grand parent.
-    if (grand_parent == NULL || parent->content_type != PaneType::Container) return;
-
-    if (parent->content.container.lpane_id == pane->id) {
-        remaining_pane = FilePane_GetPaneById(parent->content.container.rpane_id);
-    }
-    else if (parent->content.container.rpane_id == pane->id) {
-        remaining_pane = FilePane_GetPaneById(parent->content.container.lpane_id);
-    }
-    else {
-        // unable to determine which position the pane to be deleted is in...
-        // just return without doing anything
-        return;
-    }
-
-    // could not find the remaining pane, just return without doing anything
-    if (remaining_pane == NULL) return;
-
-    // Panes are organized into a binary tree (not balanced) where containers always have two
-    // children and are considered branch nodes. Leaf nodes are always the folder browser or
-    // explorer panes. Both leaf nodes of a container are always filled. When removing a Leaf
-    // node (explorer pane), also remove the container and set the remaining explorer pane
-    // as child of the container's parent container.
-
-    ReplaceParentWithChildOnGrandParent(grand_parent, parent, remaining_pane);
-
-    // this should deallocate the parent and the removed pane
-    FilePane_DeallocatePane(parent);
-    ASSERT(pane->content_type == PaneType::NotSet, L"removed pane was not deallocated!");
-    ASSERT(parent->content_type == PaneType::NotSet, L"container pane was not deallocated");
-    ASSERT(remaining_pane->parent_id == grand_parent->id, L"remaining pane did not get added to grandparent");
 }
 
 POINT GetPoint(HWND hwnd, MSG *msg)
@@ -437,11 +218,6 @@ void PreDispatch_OnXButtonDown(HWND hwnd, MSG *msg)
         else if (button == XBUTTON2) { // forward
             pane->content.explorer.browser->BrowseToIDList(NULL, SBSP_NAVIGATEFORWARD);
         }
-        //IFolderView *ppv;
-        //pane->content.explorer.browser->BrowseToObject
-        // if (SUCCEEDED(pane->content.explorer.browser->GetCurrentView(IID_IFolderView, (void**)&ppv))) {
-            
-        // }
     }
 }
 
@@ -521,26 +297,6 @@ WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             DeleteObject(inactive_brush);
             EndPaint(hwnd, &ps);
         } break;
-        // case WM_COMMAND: {
-        //     USHORT ctl_id = LOWORD(wParam);
-        //     USHORT code = HIWORD(wParam);
-        //     //HWND ctl_handle = (HWND)lParam;
-        //     switch(code)
-        //     {
-        //         case BN_CLICKED: {
-        //             DEBUGALERT(L"clicked");
-        //             // int pane_id = (int)LOBYTE(ctl_id);
-        //             // UNREFERENCED_PARAMETER(pane_id);
-        //             // ButtonFunction function = (ButtonFunction)HIBYTE(ctl_id);
-        //             // if (function == ButtonFunction::SplitHorizontal) {
-        //             //     DEBUGALERT(L"split horizontal");
-        //             // }
-        //             // else if (function == ButtonFunction::SplitVertical) {
-        //             //     DEBUGALERT(L"split vertical");
-        //             // }
-        //         } break;
-        //     }
-        // } break;
     }
 
     return DefWindowProcW(hwnd, msg, wParam, lParam);

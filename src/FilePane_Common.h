@@ -219,6 +219,35 @@ void SplitPane(Pane *explorer_pane, SplitType split_type, SplitDirection split_d
 void RemovePane(Pane *pane);
 void ComputeLayout(HWND hwnd);
 
+// FilePane_Drawing
+void DrawPointsAsLinePairsCenteredInBox(Graphics *g, Pen *pen, PointF *points, int count, float rcx, float rcy, float rcw, float rch);
+float GetHeight(PointF *points, int count);
+float GetWidth(PointF *points, int count);
+void Scale(PointF *points, int count, float scale);
+void Translate(PointF *points, int count, float x, float y);
+void Center(PointF *points, int count, float rcx, float rcy, float rcw, float rch);
+void matmul(PointF *point, mat2x2 *mat);
+void Rotate90(PointF *points, int count);
+void DrawExplorerFrame(Pane *pane, HDC hdc, HBRUSH brush);
+
+// FilePane_Panes
+inline void FilePane_SetSplitHandleCursor(Pane *pane);
+Pane* FilePane_GetFolderBrowserPane();
+Pane* FilePane_GetPaneById(int id);
+Pane* FilePane_GetRootPane();
+Pane* FilePane_AllocatePane();
+void FilePane_DeallocatePane(Pane *pane);
+Pane* FilePane_GetExplorerPaneById(int id);
+Pane* FilePane_GetActiveExplorerPane();
+void FilePane_SetFocus(int id);
+Pane* FilePane_GetExplorerPaneByPt(POINT pt);
+Pane* InitContainerPane(HWND hwnd);
+void InitFolderBrowserPane(HWND hwnd, HINSTANCE hInstance, Pane *parent);
+Pane* InitExplorerBrowserPane(HWND hwnd, HINSTANCE hInstance, Pane *parent);
+void SplitPane(Pane *explorer_pane, SplitType split_type, SplitDirection split_direction, float split_value);
+void ReplaceParentWithChildOnGrandParent(Pane *grand_parent, Pane *parent, Pane *child);
+void RemovePane(Pane *pane);
+
 /// GLOBAL STATE
 HWND g_main_window_hwnd;
 HINSTANCE g_hinstance;
@@ -363,197 +392,5 @@ void Alert(UINT type, LPCWSTR caption, LPCWSTR format, ...)
     (rc).right = (rc).right - (v); \
     (rc).top = (rc).top + (v); \
     (rc).bottom = (rc).bottom - (v); }
-
-inline
-void FilePane_SetSplitHandleCursor(Pane *pane)
-{
-    if (pane->content.container.split_direction == SplitDirection::Horizontal) {
-        SetCursor(g_idc_sizens);
-    }
-    else if (pane->content.container.split_direction == SplitDirection::Vertical) {
-        SetCursor(g_idc_sizewe);
-    }
-}
-
-Pane* FilePane_GetFolderBrowserPane() {
-    for(int i = 0; i < MAX_PANES; i++) {
-        if (g_panes[i].content_type == PaneType::FolderBrowser) {
-            return &g_panes[i];
-        }
-    }
-    return NULL;
-}
-
-Pane* FilePane_GetPaneById(int id)
-{
-    Pane *pane = &g_panes[id];
-    return pane;
-}
-
-Pane* FilePane_GetRootPane()
-{
-    Pane *pane = FilePane_GetPaneById(1);
-    return pane;
-}
-
-Pane* FilePane_AllocatePane()
-{
-    for(int i = 1; i < MAX_PANES; i++) {
-        Pane *pane = &g_panes[i];
-        if (pane->content_type == PaneType::NotSet) {
-            memset(pane, 0, sizeof(Pane));
-            pane->id = i;
-            g_panes_count++;
-            return pane;
-        }
-    }
-    return NULL;
-}
-
-void FilePane_DeallocatePane(Pane *pane)
-{
-    if (pane == NULL) return;
-    if (pane->content_type == PaneType::ExplorerBrowser) {
-        pane->content.explorer.browser->Destroy();
-        DestroyWindow(pane->content.explorer.txt_path);
-        DestroyWindow(pane->content.explorer.btn_split_h);
-        DestroyWindow(pane->content.explorer.tt_split_h);
-        DestroyWindow(pane->content.explorer.btn_split_v);
-        DestroyWindow(pane->content.explorer.tt_split_v);
-        DestroyWindow(pane->content.explorer.btn_back);
-        DestroyWindow(pane->content.explorer.tt_back);
-        DestroyWindow(pane->content.explorer.btn_up);
-        DestroyWindow(pane->content.explorer.tt_up);
-        DestroyWindow(pane->content.explorer.btn_refresh);
-        DestroyWindow(pane->content.explorer.tt_refresh);
-        DestroyWindow(pane->content.explorer.btn_remove);
-        DestroyWindow(pane->content.explorer.tt_remove);
-    }
-    else if(pane->content_type == PaneType::FolderBrowser) {
-        CloseHandle(pane->content.folder.tree->hwnd);
-        DeleteObject(pane->content.folder.tree->font);
-        ImageList_Destroy(pane->content.folder.tree->image_list);
-    }
-    else if (pane->content_type == PaneType::Container) {
-        FilePane_DeallocatePane(FilePane_GetPaneById(pane->content.container.lpane_id));
-        FilePane_DeallocatePane(FilePane_GetPaneById(pane->content.container.rpane_id));
-    }
-    g_panes_count--;
-    memset(pane, 0, sizeof(Pane));
-}
-
-Pane* FilePane_GetExplorerPaneById(int id)
-{
-    Pane *pane = FilePane_GetPaneById(id);
-    if (pane == NULL) return NULL;
-    if (pane->content_type == PaneType::ExplorerBrowser) return pane;
-    return NULL;
-}
-
-Pane* FilePane_GetActiveExplorerPane()
-{
-    // first try to get the currently focused pane
-    BEGIN_ENUM_EXPLORERS
-    if (pane->content.explorer.focused) return pane;
-    END_ENUM_EXPLORERS
-
-    // if there was none, get the first explorer pane we find
-    BEGIN_ENUM_EXPLORERS
-    return pane;
-    END_ENUM_EXPLORERS
-
-    return NULL;
-}
-
-void FilePane_SetFocus(int id)
-{
-    BEGIN_ENUM_EXPLORERS
-    if (pane->id == id) {
-        pane->content.explorer.focused = true;
-    }
-    else {
-        pane->content.explorer.focused = false;
-    }
-    END_ENUM_EXPLORERS
-}
-
-Pane* FilePane_GetExplorerPaneByPt(POINT pt)
-{
-    BEGIN_ENUM_EXPLORERS
-    if (PtInRect(&pane->rc, pt)) return pane;
-    END_ENUM_EXPLORERS
-    return NULL;
-}
-
-float GetHeight(PointF *points, int count)
-{
-    float min = 1e7f;
-    float max = 0;
-    for(int i = 0; i < count; i++) {
-        if (points[i].Y > max) {
-            max = points[i].Y;
-        }
-        if (points[i].Y < min) {
-            min =  points[i].Y;
-        }
-    }
-    return max - min;
-}
-
-float GetWidth(PointF *points, int count)
-{
-    float min = 1e7f;
-    float max = 0;
-    for(int i = 0; i < count; i++) {
-        if (points[i].X > max) {
-            max = points[i].X;
-        }
-        if (points[i].X < min) {
-            min = points[i].X;
-        }
-    }
-    return max - min;
-}
-
-void Scale(PointF *points, int count, float scale)
-{
-    for(int i = 0; i < count; i++)
-    {
-        points[i].X *= scale;
-        points[i].Y *= scale;
-    }
-}
-
-void Translate(PointF *points, int count, float x, float y)
-{
-    for(int i = 0; i < count; i++)
-    {
-        points[i].X += x;
-        points[i].Y += y;
-    }
-}
-
-void Center(PointF *points, int count, float rcx, float rcy, float rcw, float rch)
-{
-    float w = GetWidth(points, count);
-    float h = GetHeight(points, count);
-    Translate(points, count, rcx + (rcw - w)/2.0f, rcy + (rch - h)/2.0f);
-}
-
-void matmul(PointF *point, mat2x2 *mat)
-{
-    float x = point->X;
-    float y = point->Y;
-    point->X = x*mat->col1[0] + y*mat->col1[1];
-    point->Y = x*mat->col2[0] + y*mat->col2[1];
-}
-
-void Rotate90(PointF *points, int count)
-{
-    mat2x2 mat = { 0.0f, 1.0f, -1.0f, 0.0f };
-    for (int i = 0; i < count; i++) {
-        matmul(&points[i], &mat);
-    }
-}
 
 #endif

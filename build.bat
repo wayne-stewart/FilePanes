@@ -14,7 +14,7 @@ rem /02			- optimize for speed
 rem /Wall 		- enable all warnings
 rem /WX   		- warnings are treated as errors
 rem /Qspectre	- add spectre mitigations
-cl.exe ../src/_main.cpp /MT /O2 /Wall /WX /Qspectre /FeFilePanes.exe /link filepane.res
+cl.exe ../src/FilePane_Main.cpp /MT /O2 /Wall /WX /Qspectre /FeFilePanes.exe /link filepane.res
 
 FilePanes.exe
 

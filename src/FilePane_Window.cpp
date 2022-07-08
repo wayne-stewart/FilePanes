@@ -39,15 +39,6 @@ HWND CreateMainWindow(HINSTANCE hInstance)
     }
  }
 
-void DrawPointsAsLinePairsCenteredInBox(Graphics *g, Pen *pen, PointF *points, int count, float rcx, float rcy, float rcw, float rch)
-{
-    Center(points, count, rcx, rcy, rcw, rch);
-    g->SetSmoothingMode(Gdiplus::SmoothingMode::SmoothingModeAntiAlias);
-    for (int i = 0; i < count;i+=2) {
-        g->DrawLine(pen, points[i], points[i+1]);
-    }
-}
-
 LRESULT CALLBACK
 Button_OnCustomDraw(LPNMCUSTOMDRAW pnmcd)
 {

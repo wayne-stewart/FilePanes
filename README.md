@@ -42,6 +42,6 @@ The goal of this project is to create a multi-paned file explorer using the wind
 - [ ] add batch regx based rename with preview
 - [ ] integrate one drive
 - [ ] integrate iCloud drive
-
+- [ ] make exploring 7z archives transparent like zip files
 
 
