@@ -34,3 +34,6 @@
 # Build Directory
 build
 build/*
+
+# Remedy
+*.rdbg

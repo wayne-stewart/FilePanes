@@ -43,5 +43,6 @@ The goal of this project is to create a multi-paned file explorer using the wind
 - [ ] integrate one drive
 - [ ] integrate iCloud drive
 - [ ] make exploring 7z archives transparent like zip files
+- [ ] move opening a folder location in tree out of main thread so when it takes a long time like HDD spin up or network access doesn't block the main thread.
 
 

@@ -393,4 +393,175 @@ void Alert(UINT type, LPCWSTR caption, LPCWSTR format, ...)
     (rc).top = (rc).top + (v); \
     (rc).bottom = (rc).bottom - (v); }
 
+struct StringBuilder 
+{
+    WCHAR *buffer;
+    int capacity;
+    int length;
+};
+
+void StringBuilder_Init(StringBuilder *sb)
+{
+    sb->buffer = (WCHAR*)calloc(2048, 2);
+    sb->capacity = 2048;
+    sb->length = 0;
+}
+
+void StringBuilder_Append(StringBuilder *sb, LPCWSTR format, ...) 
+{
+    va_list args;
+    va_start(args, format);
+    WCHAR format_buffer[2048] = {};
+    int formatted_length = vswprintf(format_buffer, ARRAYSIZE(format_buffer), format, args);
+    va_end(args);
+
+    // couldn't write the formatted string
+    if (formatted_length < 0) return;
+
+    // resize buffer if needed
+    if ((sb->length + formatted_length + 1) > sb->capacity) {
+        int a = sb->length + formatted_length;
+        int b = a * 2; // increase buffer by length + what's needed * 2;
+        int c = b % 2048;
+        int d = b + c; // malloc 2k char at once, means 4k pages.
+        WCHAR *nbuf = (WCHAR*)calloc((size_t)d, 2);
+        memcpy((void*)nbuf, (void*)sb->buffer, (size_t)(sb->length * 2));
+        free(sb->buffer);
+        sb->buffer = nbuf;
+    }
+
+    memcpy((void*)(sb->buffer+sb->length), (void*)format_buffer, (size_t)(formatted_length * 2));
+
+    sb->length += formatted_length;
+    sb->buffer[sb->length] = '\0';
+}
+
+void StringBuilder_Destroy(StringBuilder *sb)
+{
+    free(sb->buffer);
+}
+
+void FilePane_SaveState()
+{
+    WCHAR path_buffer[MAX_PATH] = {};
+    WINDOWINFO info = {};
+    PWSTR app_data_path;
+    HANDLE hfile;
+    DWORD bytes_written = 0;
+    int w, h;
+
+    GetWindowInfo(g_main_window_hwnd, &info);
+    w = info.rcWindow.right - info.rcWindow.left;
+    h = info.rcWindow.bottom - info.rcWindow.top;
+
+    StringBuilder sb;
+    StringBuilder_Init(&sb);
+
+    StringBuilder_Append(&sb, L"Window\n%d\n%d\n", w, h);
+
+    for(int i = 0; i < MAX_PANES; i++)
+    {
+        Pane *pane = &g_panes[i];
+        if (pane->content_type == PaneType::NotSet) continue;
+
+        StringBuilder_Append(&sb, L"\nPane\n");
+        StringBuilder_Append(&sb, L"%d\n", pane->id);
+        StringBuilder_Append(&sb, L"%d\n", pane->parent_id);
+        StringBuilder_Append(&sb, L"%d\n", pane->content_type);
+        StringBuilder_Append(&sb, L"%d\n", pane->rc.left);
+        StringBuilder_Append(&sb, L"%d\n", pane->rc.top);
+        StringBuilder_Append(&sb, L"%d\n", pane->rc.right);
+        StringBuilder_Append(&sb, L"%d\n", pane->rc.bottom);
+        if (pane->content_type == PaneType::Container) {
+            StringBuilder_Append(&sb, L"%d\n", pane->content.container.split_type);
+            StringBuilder_Append(&sb, L"%d\n", pane->content.container.split_direction);
+            StringBuilder_Append(&sb, L"%f\n", pane->content.container.split);
+            StringBuilder_Append(&sb, L"%d\n", pane->content.container.lpane_id);
+            StringBuilder_Append(&sb, L"%d\n", pane->content.container.rpane_id);
+        }
+        else if (pane->content_type == PaneType::ExplorerBrowser) {
+            Edit_GetText(pane->content.explorer.txt_path, (LPWSTR)&path_buffer, ARRAYSIZE(path_buffer));
+            StringBuilder_Append(&sb, L"%ls\n", path_buffer);
+        }
+    }
+
+    if (S_OK != SHGetKnownFolderPath(FOLDERID_LocalAppData, NULL, NULL, &app_data_path)) goto CLEANUP;
+
+    PathCombineW(path_buffer, app_data_path, L"FilePanes");
+    CreateDirectoryW(path_buffer, NULL);
+
+    PathCombineW(path_buffer, app_data_path, L"FilePanes\\c6cebe2e-6d1b-48c4-a5bb-34386f337e17");
+    CoTaskMemFree(app_data_path);
+
+    hfile = CreateFileW(path_buffer, GENERIC_READ|GENERIC_WRITE, NULL, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (hfile != INVALID_HANDLE_VALUE)
+    {
+        WriteFile(hfile, sb.buffer, (DWORD)sb.length*2, &bytes_written, NULL);
+        CloseHandle(hfile);
+    }
+
+    CLEANUP:
+    StringBuilder_Destroy(&sb);
+}
+
+void FilePane_LoadDefaultState()
+{
+    Pane *primary_pane = InitContainerPane(g_main_window_hwnd);
+    InitFolderBrowserPane(g_main_window_hwnd, g_hinstance, primary_pane);
+    InitExplorerBrowserPane(g_main_window_hwnd, g_hinstance, primary_pane);
+    ComputeLayout(g_main_window_hwnd);
+}
+
+void FilePane_LoadState()
+{
+    WCHAR path_buffer[MAX_PATH] = {};
+    PWSTR app_data_path;
+    int load_default_state = 1;
+    DWORD bytes_read;
+    int w, h;
+
+    if (S_OK == SHGetKnownFolderPath(FOLDERID_LocalAppData, NULL, NULL, &app_data_path)) 
+    {
+        PathCombineW(path_buffer, app_data_path, L"FilePanes\\c6cebe2e-6d1b-48c4-a5bb-34386f337e17");
+        CoTaskMemFree(app_data_path);
+
+        HANDLE hfile = CreateFileW(path_buffer, GENERIC_READ, NULL, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+        if (hfile != INVALID_HANDLE_VALUE)
+        {
+            DWORD file_size = GetFileSize(hfile, NULL);
+            if (file_size != INVALID_FILE_SIZE)
+            {
+                WCHAR *file_contents = (WCHAR*)malloc(file_size);
+                if (file_contents)
+                {
+                    if(ReadFile(hfile, file_contents, file_size, &bytes_read, NULL))
+                    {
+                        WCHAR *context;
+                        WCHAR *token = wcstok_s(file_contents, L"\n", &context);
+                        while(token != NULL) 
+                        {
+                            if (wcscmp(L"Window", token) == 0) {
+                                token = wcstok_s(NULL, L"\n",  &context);
+                                w = wcstol(token,NULL, 10);
+                                token = wcstok_s(NULL, L"\n",  &context);
+                                h = wcstol(token, NULL, 10);
+                                SetWindowPos(g_main_window_hwnd, NULL, CW_USEDEFAULT, CW_USEDEFAULT, w, h, SWP_SHOWWINDOW | SWP_NOMOVE);
+                            }
+                            token = wcstok_s(NULL, L"\n", &context);
+                        }
+                    }
+                    free(file_contents);
+                }
+            }
+            CloseHandle(hfile);
+        }
+    }
+
+    if (load_default_state)
+    {
+        FilePane_LoadDefaultState();
+    }
+}
+
 #endif
+

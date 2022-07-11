@@ -257,6 +257,7 @@ WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
     switch(msg)
     {
         case WM_DESTROY:
+            FilePane_SaveState();
             PostQuitMessage(0);
             break;
         case WM_SIZE:
@@ -328,8 +329,6 @@ wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdS
     Scale(g_back_points, ARRAYSIZE(g_back_points), 18.0f/6.0f);
     Scale(g_remove_points, ARRAYSIZE(g_remove_points), 18.0f/6.0f);
 
-    hwnd = CreateMainWindow(hInstance);
-
     // required for all COM calls later
     hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
     if FAILED(hr) return 1;
@@ -342,11 +341,9 @@ wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdS
     g_idc_sizewe = LoadCursorW(0, IDC_SIZEWE);
     g_idc_arrow = LoadCursorW(0, IDC_ARROW);
 
-    Pane *primary_pane = InitContainerPane(hwnd);
-    InitFolderBrowserPane(hwnd, hInstance, primary_pane);
-    InitExplorerBrowserPane(hwnd, hInstance, primary_pane);
-
-    ComputeLayout(hwnd);
+    hwnd = CreateMainWindow(hInstance);
+    FilePane_LoadState();
+    //FilePane_LoadDefaultState();
 
     ShowWindow(hwnd, nCmdShow);
     UpdateWindow(hwnd);
