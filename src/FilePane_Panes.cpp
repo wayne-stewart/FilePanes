@@ -133,75 +133,92 @@ Pane* InitContainerPane(HWND hwnd)
     return pane;
 }
 
-void InitFolderBrowserPane(HWND hwnd, HINSTANCE hInstance, Pane *parent)
+void InitFolderBrowserPane(Pane *parent)
 {
-    FolderBrowserTree *tree = (FolderBrowserTree*)calloc(1, sizeof(FolderBrowserTree));
     Pane *pane = FilePane_AllocatePane();
     pane->parent_id = parent->id;
     pane->content_type = PaneType::FolderBrowser;
-    pane->content.folder.tree = tree;
     parent->content.container.lpane_id = pane->id;
-    RECT rc = {};
-    FolderBrowser_Create(tree, hwnd, hInstance, &rc);
+    InitFolderBrowserPaneUI(pane);
+}
+
+void InitFolderBrowserPaneUI(Pane *pane)
+{
+    if (pane->id == 0) return;
+    FolderBrowserTree *tree = (FolderBrowserTree*)calloc(1, sizeof(FolderBrowserTree));
+    pane->content.folder.tree = tree;
+    FolderBrowser_Create(tree, g_main_window_hwnd, g_hinstance, &pane->rc);
     FolderBrowser_FillRoot(tree);
 }
 
-Pane* InitExplorerBrowserPane(HWND hwnd, HINSTANCE hInstance, Pane *parent)
+Pane* InitExplorerBrowserPane(Pane *parent)
 {
     ASSERT(parent!=NULL&&parent->content_type==PaneType::Container,L"Explorer Parent must be a container!");
-    HRESULT hr;
-
-    // create the com instance for IExplorerBrowser
-    IExplorerBrowser *browser;
-    hr = CoCreateInstance(CLSID_ExplorerBrowser, NULL, CLSCTX_INPROC, IID_PPV_ARGS(&browser));
-    if FAILED(hr) return NULL;
-
-    // initialize the ExplorerBrowser
-    FOLDERSETTINGS fs = {};
-    RECT rc = {};
-    fs.ViewMode = FVM_DETAILS;// FVM_LIST; // FVM_CONTENT; //FVM_ICON; // FVM_DETAILS;
-    fs.fFlags = FWF_NOWEBVIEW; // | FWF_NOCOLUMNHEADER;
-    browser->SetOptions(EBO_NOBORDER | EBO_NOWRAPPERWINDOW);
-    browser->Initialize(hwnd, &rc, &fs);
-
-    // subscribe to events from the explorer window
-    ExplorerBrowserEvents *browser_events = new ExplorerBrowserEvents();
-    DWORD cookie;
-    hr = browser->Advise(browser_events, &cookie);
-    ASSERT(hr==S_OK, L"could not subscribe to IExplorerBrowser events!");
 
     // create the Pane
     Pane *pane = FilePane_AllocatePane();
     pane->parent_id = parent->id;
     pane->content_type = PaneType::ExplorerBrowser;
+    parent->content.container.rpane_id = pane->id;
+
+    InitExplorerBrowserPaneUI(pane, NULL);
+
+    return pane;
+}
+
+void InitExplorerBrowserPaneUI(Pane *pane, LPCWSTR path)
+{
+    HRESULT hr;
+
+    // create the com instance for IExplorerBrowser
+    IExplorerBrowser *browser;
+    hr = CoCreateInstance(CLSID_ExplorerBrowser, NULL, CLSCTX_INPROC, IID_PPV_ARGS(&browser));
+    if FAILED(hr) return;
+
+    // initialize the ExplorerBrowser
+    FOLDERSETTINGS fs = {};
+    fs.ViewMode = FVM_DETAILS;// FVM_LIST; // FVM_CONTENT; //FVM_ICON; // FVM_DETAILS;
+    fs.fFlags = FWF_NOWEBVIEW; // | FWF_NOCOLUMNHEADER;
+    browser->SetOptions(EBO_NOBORDER | EBO_NOWRAPPERWINDOW);
+    browser->Initialize(g_main_window_hwnd, &pane->rc, &fs);
+
+    // subscribe to events from the explorer window
+    ExplorerBrowserEvents *browser_events = new ExplorerBrowserEvents();
+    browser_events->SetPaneId(pane->id);
+
+    DWORD cookie;
+    hr = browser->Advise(browser_events, &cookie);
+    ASSERT(hr==S_OK, L"could not subscribe to IExplorerBrowser events!");
+
     pane->content.explorer.browser = browser;
     pane->content.explorer.events = browser_events;
     pane->content.explorer.event_cookie = cookie;
-    parent->content.container.rpane_id = pane->id;
-    browser_events->SetPaneId(pane->id);
 
     // create pane controls
-    pane->content.explorer.txt_path = CreateTextBox(hwnd, hInstance, pane->id);
-    pane->content.explorer.btn_split_h = CreateButton(hwnd, hInstance, L"Split Horizontal", pane->id, ButtonFunction::SplitHorizontal);
+    pane->content.explorer.txt_path = CreateTextBox(g_main_window_hwnd, g_hinstance, pane->id);
+    pane->content.explorer.btn_split_h = CreateButton(g_main_window_hwnd, g_hinstance, L"Split Horizontal", pane->id, ButtonFunction::SplitHorizontal);
     pane->content.explorer.tt_split_h = CreateToolTip(g_main_window_hwnd, pane->content.explorer.btn_split_h, L"Split Horizontal");
-    pane->content.explorer.btn_split_v = CreateButton(hwnd, hInstance, L"Split Vertical", pane->id, ButtonFunction::SplitVertical);
+    pane->content.explorer.btn_split_v = CreateButton(g_main_window_hwnd, g_hinstance, L"Split Vertical", pane->id, ButtonFunction::SplitVertical);
     pane->content.explorer.tt_split_v = CreateToolTip(g_main_window_hwnd, pane->content.explorer.btn_split_v, L"Split Vertical");
-    pane->content.explorer.btn_back = CreateButton(hwnd, hInstance, L"Go Back", pane->id, ButtonFunction::Back);
-    pane->content.explorer.tt_back = CreateToolTip(hwnd, pane->content.explorer.btn_back, L"Go Back");
-    pane->content.explorer.btn_up = CreateButton(hwnd, hInstance, L"Go Up a Directory", pane->id, ButtonFunction::Up);
-    pane->content.explorer.tt_up = CreateToolTip(hwnd, pane->content.explorer.btn_up, L"Go Up a Directory");
-    pane->content.explorer.btn_refresh = CreateButton(hwnd, hInstance, L"Refresh", pane->id, ButtonFunction::Refresh);
-    pane->content.explorer.tt_refresh = CreateToolTip(hwnd, pane->content.explorer.btn_refresh, L"Refresh");
-    pane->content.explorer.btn_remove = CreateButton(hwnd, hInstance, L"Remove Pane", pane->id, ButtonFunction::Remove);
-    pane->content.explorer.tt_remove = CreateToolTip(hwnd, pane->content.explorer.btn_remove, L"Remove Pane");
+    pane->content.explorer.btn_back = CreateButton(g_main_window_hwnd, g_hinstance, L"Go Back", pane->id, ButtonFunction::Back);
+    pane->content.explorer.tt_back = CreateToolTip(g_main_window_hwnd, pane->content.explorer.btn_back, L"Go Back");
+    pane->content.explorer.btn_up = CreateButton(g_main_window_hwnd, g_hinstance, L"Go Up a Directory", pane->id, ButtonFunction::Up);
+    pane->content.explorer.tt_up = CreateToolTip(g_main_window_hwnd, pane->content.explorer.btn_up, L"Go Up a Directory");
+    pane->content.explorer.btn_refresh = CreateButton(g_main_window_hwnd, g_hinstance, L"Refresh", pane->id, ButtonFunction::Refresh);
+    pane->content.explorer.tt_refresh = CreateToolTip(g_main_window_hwnd, pane->content.explorer.btn_refresh, L"Refresh");
+    pane->content.explorer.btn_remove = CreateButton(g_main_window_hwnd, g_hinstance, L"Remove Pane", pane->id, ButtonFunction::Remove);
+    pane->content.explorer.tt_remove = CreateToolTip(g_main_window_hwnd, pane->content.explorer.btn_remove, L"Remove Pane");
 
     // browse to folder location
-    IShellFolder *pshf;
-    SHGetDesktopFolder(&pshf);
-    browser->BrowseToObject(pshf, NULL);
-    pshf->Release();
-
-    return pane;
+    if (path == NULL) {
+        IShellFolder *pshf;
+        SHGetDesktopFolder(&pshf);
+        browser->BrowseToObject(pshf, NULL);
+        pshf->Release();
+    }
+    else {
+        ExplorerBrowser_SetPath(path, pane);
+    }
 }
 
 void SplitPane(Pane *explorer_pane, SplitType split_type, SplitDirection split_direction, float split_value)
@@ -230,7 +247,7 @@ void SplitPane(Pane *explorer_pane, SplitType split_type, SplitDirection split_d
         parent_container_pane->content.container.rpane_id = container_pane->id;
     }
 
-    Pane *pane = InitExplorerBrowserPane(g_main_window_hwnd, g_hinstance, container_pane);
+    Pane *pane = InitExplorerBrowserPane(container_pane);
 
     FilePane_SetFocus(pane->id);
 }

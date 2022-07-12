@@ -76,7 +76,7 @@ void matmul(PointF *point, mat2x2 *mat)
 
 void Rotate90(PointF *points, int count)
 {
-    mat2x2 mat = { 0.0f, 1.0f, -1.0f, 0.0f };
+    mat2x2 mat = { {0.0f, 1.0f}, {-1.0f, 0.0f} };
     for (int i = 0; i < count; i++) {
         matmul(&points[i], &mat);
     }

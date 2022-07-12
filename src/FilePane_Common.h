@@ -242,11 +242,13 @@ Pane* FilePane_GetActiveExplorerPane();
 void FilePane_SetFocus(int id);
 Pane* FilePane_GetExplorerPaneByPt(POINT pt);
 Pane* InitContainerPane(HWND hwnd);
-void InitFolderBrowserPane(HWND hwnd, HINSTANCE hInstance, Pane *parent);
-Pane* InitExplorerBrowserPane(HWND hwnd, HINSTANCE hInstance, Pane *parent);
+void InitFolderBrowserPane(Pane *parent);
+Pane* InitExplorerBrowserPane(Pane *parent);
 void SplitPane(Pane *explorer_pane, SplitType split_type, SplitDirection split_direction, float split_value);
 void ReplaceParentWithChildOnGrandParent(Pane *grand_parent, Pane *parent, Pane *child);
 void RemovePane(Pane *pane);
+void InitExplorerBrowserPaneUI(Pane *pane, LPCWSTR path);
+void InitFolderBrowserPaneUI(Pane *pane);
 
 /// GLOBAL STATE
 HWND g_main_window_hwnd;
@@ -507,9 +509,23 @@ void FilePane_SaveState()
 void FilePane_LoadDefaultState()
 {
     Pane *primary_pane = InitContainerPane(g_main_window_hwnd);
-    InitFolderBrowserPane(g_main_window_hwnd, g_hinstance, primary_pane);
-    InitExplorerBrowserPane(g_main_window_hwnd, g_hinstance, primary_pane);
+    InitFolderBrowserPane(primary_pane);
+    InitExplorerBrowserPane(primary_pane);
     ComputeLayout(g_main_window_hwnd);
+}
+
+int ReadInt(WCHAR **context)
+{
+    WCHAR *token = wcstok_s(NULL, L"\n",  context);
+    int x = wcstol(token, NULL, 10);
+    return x;
+}
+
+float ReadFloat(WCHAR **context)
+{
+    WCHAR *token = wcstok_s(NULL, L"\n",  context);
+    float x = wcstof(token, NULL);
+    return x;
 }
 
 void FilePane_LoadState()
@@ -518,7 +534,8 @@ void FilePane_LoadState()
     PWSTR app_data_path;
     int load_default_state = 1;
     DWORD bytes_read;
-    int w, h;
+    int w, h, id;
+    WCHAR *text;
 
     if (S_OK == SHGetKnownFolderPath(FOLDERID_LocalAppData, NULL, NULL, &app_data_path)) 
     {
@@ -541,11 +558,34 @@ void FilePane_LoadState()
                         while(token != NULL) 
                         {
                             if (wcscmp(L"Window", token) == 0) {
-                                token = wcstok_s(NULL, L"\n",  &context);
-                                w = wcstol(token,NULL, 10);
-                                token = wcstok_s(NULL, L"\n",  &context);
-                                h = wcstol(token, NULL, 10);
+                                w = ReadInt(&context);
+                                h = ReadInt(&context);
                                 SetWindowPos(g_main_window_hwnd, NULL, CW_USEDEFAULT, CW_USEDEFAULT, w, h, SWP_SHOWWINDOW | SWP_NOMOVE);
+                            }
+                            else if (wcscmp(L"Pane", token) == 0) {
+                                id = ReadInt(&context);
+                                Pane *pane = FilePane_GetPaneById(id);
+                                pane->id  = id;
+                                pane->parent_id = ReadInt(&context);
+                                pane->content_type = (PaneType)ReadInt(&context);
+                                pane->rc.left = ReadInt(&context);
+                                pane->rc.top = ReadInt(&context);
+                                pane->rc.right = ReadInt(&context);
+                                pane->rc.bottom = ReadInt(&context);
+                                if (pane->content_type == PaneType::Container) {
+                                    pane->content.container.split_type = (SplitType)ReadInt(&context);
+                                    pane->content.container.split_direction = (SplitDirection)ReadInt(&context);
+                                    pane->content.container.split = ReadFloat(&context);
+                                    pane->content.container.lpane_id = ReadInt(&context);
+                                    pane->content.container.rpane_id = ReadInt(&context);
+                                }
+                                else if (pane->content_type == PaneType::ExplorerBrowser) {
+                                    text = wcstok_s(NULL, L"\n", &context);
+                                    InitExplorerBrowserPaneUI(pane, text);
+                                }
+                                else if (pane->content_type == PaneType::FolderBrowser) {
+                                    InitFolderBrowserPaneUI(pane);
+                                }
                             }
                             token = wcstok_s(NULL, L"\n", &context);
                         }

@@ -16,10 +16,10 @@ rem /Wall 		- enable all warnings
 rem /WX   		- warnings are treated as errors
 rem /Qspectre	- add spectre mitigations
 
-rem cl.exe ../src/FilePane_Main.cpp /MT /O2 /Wall /WX /Qspectre /FeFilePanes.exe /link filepane.res
-rem FilePanes.exe
+cl.exe ../src/FilePane_Main.cpp /MT /O2 /Wall /WX /Qspectre /FeFilePanes.exe /link filepane.res
+FilePanes.exe
 
-cl.exe ../src/FilePane_Main.cpp /MT /Zi /Wall /WX /Qspectre /FeFilePanes.exe /link /DEBUG:FULL filepane.res
+rem cl.exe ../src/FilePane_Main.cpp /MT /Zi /Wall /WX /Qspectre /FeFilePanes.exe /link /DEBUG:FULL filepane.res
 
 
 
