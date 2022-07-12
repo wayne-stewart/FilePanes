@@ -31,11 +31,9 @@ The goal of this project is to create a multi-paned file explorer using the wind
 - [ ] add preview pane
 - [ ] add console pane
 - [ ] add search
-- [ ] do more to clean up rendering to remove jitter
-   - double buffering on main window
-   - double buffering on folder browser
 - [ ] add favorites/quick access
-- [ ] improve address bar
+- improve address bar
+   - [ ] click path parts to naviate
 - [ ] add address bar history
 - [ ] add custom actions ( menu or toolbar ?)
 - [ ] customize explorer details columns
@@ -44,5 +42,5 @@ The goal of this project is to create a multi-paned file explorer using the wind
 - [ ] integrate iCloud drive
 - [ ] make exploring 7z archives transparent like zip files
 - [ ] move opening a folder location in tree out of main thread so when it takes a long time like HDD spin up or network access doesn't block the main thread.
-
+- [ ] add auto updater based on github releases
 
