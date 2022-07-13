@@ -32,8 +32,7 @@ The goal of this project is to create a multi-paned file explorer using the wind
 - [ ] add console pane
 - [ ] add search
 - [ ] add favorites/quick access
-- improve address bar
-   - [ ] click path parts to naviate
+- [ ] click path parts in address bar to naviate
 - [ ] add address bar history
 - [ ] add custom actions ( menu or toolbar ?)
 - [ ] customize explorer details columns

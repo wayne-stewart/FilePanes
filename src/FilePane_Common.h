@@ -492,7 +492,7 @@ void FilePane_SaveState()
     PathCombineW(path_buffer, app_data_path, L"FilePanes");
     CreateDirectoryW(path_buffer, NULL);
 
-    PathCombineW(path_buffer, app_data_path, L"FilePanes\\c6cebe2e-6d1b-48c4-a5bb-34386f337e17");
+    PathCombineW(path_buffer, app_data_path, L"FilePanes\\config.txt");
     CoTaskMemFree(app_data_path);
 
     hfile = CreateFileW(path_buffer, GENERIC_READ|GENERIC_WRITE, NULL, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -511,7 +511,6 @@ void FilePane_LoadDefaultState()
     Pane *primary_pane = InitContainerPane(g_main_window_hwnd);
     InitFolderBrowserPane(primary_pane);
     InitExplorerBrowserPane(primary_pane);
-    ComputeLayout(g_main_window_hwnd);
 }
 
 int ReadInt(WCHAR **context)
@@ -539,7 +538,7 @@ void FilePane_LoadState()
 
     if (S_OK == SHGetKnownFolderPath(FOLDERID_LocalAppData, NULL, NULL, &app_data_path)) 
     {
-        PathCombineW(path_buffer, app_data_path, L"FilePanes\\c6cebe2e-6d1b-48c4-a5bb-34386f337e17");
+        PathCombineW(path_buffer, app_data_path, L"FilePanes\\config.txt");
         CoTaskMemFree(app_data_path);
 
         HANDLE hfile = CreateFileW(path_buffer, GENERIC_READ, NULL, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -589,6 +588,7 @@ void FilePane_LoadState()
                             }
                             token = wcstok_s(NULL, L"\n", &context);
                         }
+                        load_default_state = 0;
                     }
                     free(file_contents);
                 }
@@ -601,6 +601,8 @@ void FilePane_LoadState()
     {
         FilePane_LoadDefaultState();
     }
+
+    ComputeLayout(g_main_window_hwnd);
 }
 
 #endif
