@@ -12,6 +12,7 @@
 
 #include <windows.h>
 #include <windowsx.h>           // for WM_COMMAND handling macros
+#include <shellapi.h>           // shell constants
 #include <shlobj.h>             // shell stuff
 #include <shlwapi.h>            // QISearch, easy way to implement QI
 #include <propkey.h>
@@ -603,6 +604,26 @@ void FilePane_LoadState()
     }
 
     ComputeLayout(g_main_window_hwnd);
+}
+
+/*
+https://github.com/microsoft/Windows-classic-samples/blob/main/Samples/Win7Samples/winui/shell/appplatform/fileoperations/FileOperationSample.cpp
+*/
+HRESULT CreateAndInitializeFileOperation(REFIID riid, void **ppv)
+{
+    *ppv = NULL;
+    IFileOperation *file_operation;
+    HRESULT hr = CoCreateInstance(__uuidof(FileOperation), NULL, CLSCTX_ALL, IID_PPV_ARGS(&file_operation));
+    if (SUCCEEDED(hr))
+    {
+        hr = file_operation->SetOperationFlags(FOF_ALLOWUNDO | FOF_NOCONFIRMMKDIR);//  FOF_NO_UI);
+        if (SUCCEEDED(hr))
+        {
+            hr = file_operation->QueryInterface(riid, ppv);
+        }
+        file_operation->Release();
+    }
+    return hr;
 }
 
 #endif

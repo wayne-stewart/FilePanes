@@ -85,4 +85,39 @@ void ExplorerBrowser_SetPath(LPCWSTR path, Pane *pane)
     }
 }
 
+void ExplorerBrowser_DeleteSelected(Pane *pane)
+{
+    if (pane == NULL || pane->content_type != PaneType::ExplorerBrowser) return;
 
+    IFolderView *folder_view;
+    if (S_OK == pane->content.explorer.browser->GetCurrentView(IID_IFolderView, (LPVOID*)&folder_view))
+    {
+        IShellItemArray *shell_items;
+        if (S_OK == folder_view->Items(SVGIO_SELECTION, IID_IShellItemArray, (LPVOID*)&shell_items))
+        {
+            IFileOperation *file_operation;
+            if (SUCCEEDED(CreateAndInitializeFileOperation(IID_PPV_ARGS(&file_operation))))
+            {
+                // shell_item does not need to be freed,
+                // it will be freed when shell_items is freed
+                // IShellItem *shell_item;
+                // if (SUCCEEDED(shell_items->GetItemAt(0, &shell_item)))
+                // {
+                //     LPWSTR item_name;
+                //     if (SUCCEEDED(shell_item->GetDisplayName(SIGDN_NORMALDISPLAY, &item_name)))
+                //     {
+                //         Alert(NULL, L"Shell Item", item_name);
+                //         CoTaskMemFree(item_name);
+                //     }
+                // }
+                if (SUCCEEDED(file_operation->DeleteItems(shell_items)))
+                {
+                    file_operation->PerformOperations();
+                }
+                file_operation->Release();
+            }
+            shell_items->Release();
+        }
+        folder_view->Release();
+    }
+}

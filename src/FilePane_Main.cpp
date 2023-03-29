@@ -221,6 +221,23 @@ void PreDispatch_OnXButtonDown(HWND hwnd, MSG *msg)
     }
 }
 
+int PreDispatch_OnKeyDown(HWND hwnd, MSG *msg)
+{
+    UNREFERENCED_PARAMETER(hwnd);
+    
+    Pane *pane;
+    switch(msg->wParam)
+    {
+    case VK_DELETE:
+        pane = FilePane_GetActiveExplorerPane();
+        ExplorerBrowser_DeleteSelected(pane);
+        break;
+    default:
+        return 1;
+    }
+    return 0;
+}
+
 int PreDispatchMessage(HWND hwnd, MSG *msg)
 {
     /*
@@ -246,6 +263,9 @@ int PreDispatchMessage(HWND hwnd, MSG *msg)
             break;
         case WM_XBUTTONDOWN:
             PreDispatch_OnXButtonDown(hwnd, msg);
+            break;
+        case WM_KEYDOWN:
+            return PreDispatch_OnKeyDown(hwnd, msg);
             break;
     }
     return 1;
