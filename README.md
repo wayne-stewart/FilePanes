@@ -3,8 +3,10 @@ Multi-Paned File Explorer
 
 The goal of this project is to create a multi-paned file explorer using the windows shell apis to maintain maximum compatibility users know and love with the default file explorer.
 
+## v0.2 in progress
+- [ ] handle delete key (TODO: focus must not be on the explorer window, not folder input)
 
-## v0.1.0 - in progress
+## v0.1.0
 - [x] make a better app icon
 - [x] add button tool tips
 - [x] go to folder on enter in address bar
