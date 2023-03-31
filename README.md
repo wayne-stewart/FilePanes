@@ -10,7 +10,7 @@ The goal of this project is to create a multi-paned file explorer using the wind
 - [ ] handle ctl-c to copy
 - [ ] handle ctl-v to paste
 
-## v0.1.0
+## v0.1
 - [x] make a better app icon
 - [x] add button tool tips
 - [x] go to folder on enter in address bar
