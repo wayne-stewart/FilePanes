@@ -128,10 +128,11 @@ struct ButtonID {
     ButtonFunction function;
 };
 
-class ExplorerBrowserEvents : public IServiceProvider, public IExplorerBrowserEvents //, public ICommDlgBrowser, public ICommDlgBrowser2
+class ExplorerBrowserEvents : public IServiceProvider, public IExplorerBrowserEvents , public ICommDlgBrowser//, public ICommDlgBrowser2
 {
 public:
     void SetPaneId(int id);
+    bool HasFocus();
 
     // IUnknown
     IFACEMETHODIMP QueryInterface(REFIID riid, void **ppv);
@@ -147,12 +148,18 @@ public:
     IFACEMETHODIMP OnNavigationComplete(PCIDLIST_ABSOLUTE pidlFolder);
     IFACEMETHODIMP OnNavigationFailed(PCIDLIST_ABSOLUTE /* pidlFolder */);
 
+    // ICommDlgBrowser
+    HRESULT IncludeObject(IShellView *shell_view, PCUITEMID_CHILD pidl);
+    HRESULT OnDefaultCommand(IShellView *shell_view);
+    HRESULT OnStateChange(IShellView *shell_view, ULONG uChange);
+
     // fix compiler warning 5204 about not having a virtual deconstructor
     // in case this class is subclassed.
     virtual ~ExplorerBrowserEvents() { }
 private:
     long _cRef;
     int _pane_id;
+    bool _hasfocus;
 };
 
 struct ContainerPane {

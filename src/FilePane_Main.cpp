@@ -224,18 +224,18 @@ void PreDispatch_OnXButtonDown(HWND hwnd, MSG *msg)
 int PreDispatch_OnKeyDown(HWND hwnd, MSG *msg)
 {
     UNREFERENCED_PARAMETER(hwnd);
-    
+
     Pane *pane;
     switch(msg->wParam)
     {
     case VK_DELETE:
         pane = FilePane_GetActiveExplorerPane();
-        ExplorerBrowser_DeleteSelected(pane);
+        ExplorerBrowser_HandleDeleteKeyPress(pane);
         break;
     default:
         return 1;
     }
-    return 0;
+    return 1;
 }
 
 int PreDispatchMessage(HWND hwnd, MSG *msg)

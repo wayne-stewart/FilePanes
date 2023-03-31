@@ -6,12 +6,18 @@ void ExplorerBrowserEvents::SetPaneId(int id)
     _pane_id = id;
 }
 
+bool ExplorerBrowserEvents::HasFocus()
+{
+    return _hasfocus;
+}
+
 IFACEMETHODIMP ExplorerBrowserEvents::QueryInterface(REFIID riid, void **ppv)
 {
     static const QITAB qit[] =
     {
         QITABENT(ExplorerBrowserEvents, IServiceProvider),
         QITABENT(ExplorerBrowserEvents, IExplorerBrowserEvents),
+        QITABENT(ExplorerBrowserEvents, ICommDlgBrowser),
         { 0 },
     };
     return QISearch(this, qit, riid, ppv);
@@ -72,6 +78,50 @@ IFACEMETHODIMP ExplorerBrowserEvents::OnNavigationFailed(PCIDLIST_ABSOLUTE /* pi
     return E_NOTIMPL;
 }
 
+// ICommDlgBrowser
+HRESULT ExplorerBrowserEvents::IncludeObject(IShellView *shell_view, PCUITEMID_CHILD pidl)
+{
+    UNREFERENCED_PARAMETER(shell_view);
+    UNREFERENCED_PARAMETER(pidl);
+    return E_NOTIMPL;
+}
+HRESULT ExplorerBrowserEvents::OnDefaultCommand(IShellView *shell_view)
+{
+    UNREFERENCED_PARAMETER(shell_view);
+    //DEBUGALERT(L"DEFAULT COMMAND HAPPENED");
+    return E_NOTIMPL;
+}
+HRESULT ExplorerBrowserEvents::OnStateChange(IShellView *shell_view, ULONG uChange)
+{
+    UNREFERENCED_PARAMETER(shell_view);
+    UNREFERENCED_PARAMETER(uChange);
+    switch(uChange)
+    {
+        // view got focus
+        case CDBOSC_SETFOCUS:
+        _hasfocus = true;
+        break;
+
+        // view lost focus
+        case CDBOSC_KILLFOCUS:
+        _hasfocus = false;
+        break;
+
+        // selection has changed
+        case CDBOSC_SELCHANGE:
+        break;
+
+        // an item was renamed
+        case CDBOSC_RENAME:
+        break;
+
+        // an item has been checked or unchecked
+        case CDBOSC_STATECHANGE:
+        break;
+    }
+    return S_OK;
+}
+
 void ExplorerBrowser_SetPath(LPCWSTR path, Pane *pane)
 {
     if (pane == NULL || pane->content_type != PaneType::ExplorerBrowser) return;
@@ -85,9 +135,12 @@ void ExplorerBrowser_SetPath(LPCWSTR path, Pane *pane)
     }
 }
 
-void ExplorerBrowser_DeleteSelected(Pane *pane)
+void ExplorerBrowser_HandleDeleteKeyPress(Pane *pane)
 {
     if (pane == NULL || pane->content_type != PaneType::ExplorerBrowser) return;
+
+    // don't want to process the delete if the pane does not have focus
+    if (!pane->content.explorer.events->HasFocus()) return;
 
     IFolderView *folder_view;
     if (S_OK == pane->content.explorer.browser->GetCurrentView(IID_IFolderView, (LPVOID*)&folder_view))
@@ -98,18 +151,6 @@ void ExplorerBrowser_DeleteSelected(Pane *pane)
             IFileOperation *file_operation;
             if (SUCCEEDED(CreateAndInitializeFileOperation(IID_PPV_ARGS(&file_operation))))
             {
-                // shell_item does not need to be freed,
-                // it will be freed when shell_items is freed
-                // IShellItem *shell_item;
-                // if (SUCCEEDED(shell_items->GetItemAt(0, &shell_item)))
-                // {
-                //     LPWSTR item_name;
-                //     if (SUCCEEDED(shell_item->GetDisplayName(SIGDN_NORMALDISPLAY, &item_name)))
-                //     {
-                //         Alert(NULL, L"Shell Item", item_name);
-                //         CoTaskMemFree(item_name);
-                //     }
-                // }
                 if (SUCCEEDED(file_operation->DeleteItems(shell_items)))
                 {
                     file_operation->PerformOperations();

@@ -26,4 +26,12 @@ cl.exe ../src/FilePane_Main.cpp /MT /O2 /Wall /WX /Qspectre /FeFilePanes.exe /li
 
 cl.exe ../src/FilePane_Main.cpp /MT /Zi /Wall /WX /Qspectre /FeFilePanes_DEBUG.exe /link /DEBUG:FULL filepane.res /MANIFEST:EMBED
 
-rem FilePanes.exe
+set arg1=%1
+
+if %arg1%.==run. goto RUN
+goto END
+
+:RUN
+FilePanes.exe
+
+:END

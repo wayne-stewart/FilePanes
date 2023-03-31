@@ -190,6 +190,13 @@ void InitExplorerBrowserPaneUI(Pane *pane, LPCWSTR path)
     hr = browser->Advise(browser_events, &cookie);
     ASSERT(hr==S_OK, L"could not subscribe to IExplorerBrowser events!");
 
+    IObjectWithSite *browser_site_interface;
+    hr = browser->QueryInterface(IID_PPV_ARGS(&browser_site_interface));
+    ASSERT(hr==S_OK, L"could not find IExplorerBrowser IObjectWithSite interface");
+    hr = browser_site_interface->SetSite((ICommDlgBrowser*)browser_events);
+    ASSERT(hr==S_OK, L"could not set IExplorerBrowser site to ExplorerBrowserEvents");
+    browser_site_interface->Release();
+
     pane->content.explorer.browser = browser;
     pane->content.explorer.events = browser_events;
     pane->content.explorer.event_cookie = cookie;
