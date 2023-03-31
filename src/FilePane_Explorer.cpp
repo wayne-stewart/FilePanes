@@ -145,19 +145,40 @@ void ExplorerBrowser_HandleDeleteKeyPress(Pane *pane)
     IFolderView *folder_view;
     if (S_OK == pane->content.explorer.browser->GetCurrentView(IID_IFolderView, (LPVOID*)&folder_view))
     {
-        IShellItemArray *shell_items;
-        if (S_OK == folder_view->Items(SVGIO_SELECTION, IID_IShellItemArray, (LPVOID*)&shell_items))
+        IShellItemArray *selected_items;
+        if (S_OK == folder_view->Items(SVGIO_SELECTION, IID_IShellItemArray, (LPVOID*)&selected_items))
         {
             IFileOperation *file_operation;
             if (SUCCEEDED(CreateAndInitializeFileOperation(IID_PPV_ARGS(&file_operation))))
             {
-                if (SUCCEEDED(file_operation->DeleteItems(shell_items)))
+                if (SUCCEEDED(file_operation->DeleteItems(selected_items)))
                 {
                     file_operation->PerformOperations();
                 }
                 file_operation->Release();
             }
-            shell_items->Release();
+            selected_items->Release();
+        }
+        folder_view->Release();
+    }
+}
+
+void ExplorerBrowser_HandleControlAKeyPress(Pane *pane)
+{
+    if (pane == NULL || pane->content_type != PaneType::ExplorerBrowser) return;
+
+    if (!pane->content.explorer.events->HasFocus()) return;
+
+    IFolderView *folder_view;
+    if (SUCCEEDED(pane->content.explorer.browser->GetCurrentView(IID_PPV_ARGS(&folder_view))))
+    {
+        int folder_item_count = 0;
+        if (SUCCEEDED(folder_view->ItemCount(SVGIO_ALLVIEW, &folder_item_count)))
+        {
+            for(int i = 0; i < folder_item_count; i++)
+            {
+                folder_view->SelectItem(i, SVSI_SELECT);
+            }
         }
         folder_view->Release();
     }

@@ -221,16 +221,28 @@ void PreDispatch_OnXButtonDown(HWND hwnd, MSG *msg)
     }
 }
 
-int PreDispatch_OnKeyDown(HWND hwnd, MSG *msg)
+int PreDispatch_OnKeyPress(HWND hwnd, MSG *msg, bool down)
 {
     UNREFERENCED_PARAMETER(hwnd);
+    static bool control_down = false;
 
     Pane *pane;
     switch(msg->wParam)
     {
     case VK_DELETE:
-        pane = FilePane_GetActiveExplorerPane();
-        ExplorerBrowser_HandleDeleteKeyPress(pane);
+        if (down) {
+            pane = FilePane_GetActiveExplorerPane();
+            ExplorerBrowser_HandleDeleteKeyPress(pane);
+        }
+        break;
+    case VK_CONTROL:
+        control_down = down;
+    break;
+    case 'A':
+        if (control_down) {
+            pane = FilePane_GetActiveExplorerPane();
+            ExplorerBrowser_HandleControlAKeyPress(pane);
+        }
         break;
     default:
         return 1;
@@ -238,37 +250,43 @@ int PreDispatch_OnKeyDown(HWND hwnd, MSG *msg)
     return 1;
 }
 
+
+
 int PreDispatchMessage(HWND hwnd, MSG *msg)
 {
     /*
         PreDispatchMessage allows this program to respond to
         messages that are destined for hosted windows
     */
+   int result = 1;
     switch(msg->message)
     {
         case WM_ERASEBKGND:
-            if (b_block_wm_paint) return 0;
+            if (b_block_wm_paint) result = 0;
             break;
         case WM_PAINT:
-            if (b_block_wm_paint) return 0;
+            if (b_block_wm_paint) result = 0;
             break;
         case WM_LBUTTONDOWN:
-            return PreDispatch_OnLButtonDown(hwnd, msg);
+            result = PreDispatch_OnLButtonDown(hwnd, msg);
             break;
         case WM_LBUTTONUP:
             PreDispatch_OnLButtonUp(hwnd, msg);
             break;
         case WM_MOUSEMOVE:
-            return PreDispatch_OnMouseMove(hwnd, msg);
+            result = PreDispatch_OnMouseMove(hwnd, msg);
             break;
         case WM_XBUTTONDOWN:
             PreDispatch_OnXButtonDown(hwnd, msg);
             break;
         case WM_KEYDOWN:
-            return PreDispatch_OnKeyDown(hwnd, msg);
+            result = PreDispatch_OnKeyPress(hwnd, msg, true);
+            break;
+        case WM_KEYUP:
+            result = PreDispatch_OnKeyPress(hwnd, msg, false);
             break;
     }
-    return 1;
+    return result;
 }
 
 LRESULT CALLBACK 
