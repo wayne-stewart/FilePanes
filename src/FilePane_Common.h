@@ -68,6 +68,27 @@ using Gdiplus::GdiplusStartup;
 #define FRAME_WIDTH 6
 #define HALF_FRAME_WIDTH 3
 
+#define DEBUGALERT(...) {\
+    wchar_t dbg_buf[512]; wsprintf(dbg_buf, __VA_ARGS__); \
+    MessageBoxW(NULL, dbg_buf, L"Debug Alert", MB_OK|MB_ICONINFORMATION); }
+#define DEBUGWRITE(msg_format, ...) {\
+    wchar_t dbg_buf[512]; wsprintf(dbg_buf, msg_format L"\r\n", __VA_ARGS__); \
+    OutputDebugStringW(dbg_buf); }
+
+template <typename T>
+class AutoRelease
+{
+private:
+    T *instance;
+public:
+    AutoRelease() { instance = nullptr; }
+    AutoRelease(const AutoRelease&) = delete;
+    ~AutoRelease() { DEBUGWRITE(L"auto release destructor called"); if (instance) { instance->Release(); } }
+    operator LPVOID*() const { return (LPVOID*)&instance; }
+    operator IUnknown*() const { return instance; }
+    T *operator->() const { return instance; }
+};
+
 enum SplitDirection {
     Vertical = 0,
     Horizontal = 1
@@ -376,8 +397,6 @@ void Alert(UINT type, LPCWSTR caption, LPCWSTR format, ...)
     MessageBoxW(NULL, buffer, caption, MB_OK | type);
 }
 
-#define DEBUGALERT(msg_format, ...) Alert(MB_ICONINFORMATION, L"Debug Alert", msg_format, __VA_ARGS__)
-
 #define ASSERT(test, msg_format, ...) if(!(test)) { Alert(MB_ICONERROR, L"Assert Error", msg_format, __VA_ARGS__); }
 #define CLAMP(v, min, max) ((v) > (max) ? (max) : ((v) < (min) ? (min) : (v)))
 
@@ -390,6 +409,12 @@ void Alert(UINT type, LPCWSTR caption, LPCWSTR format, ...)
     Pane *pane = &g_panes[i]; \
     if (pane->content_type == PaneType::Container) {
 #define END_ENUM_CONTAINERS }}
+
+#define CHECK_EXPLORER_BROWSER_HAS_FOCUS(pane) \
+    if (pane == NULL || pane->content_type != PaneType::ExplorerBrowser) return; \
+    if (!pane->content.explorer.events->HasFocus()) return
+
+#define CHECK_S_OK(expr) if ((expr) != S_OK) return
 
 #define EXPAND_RECT(rc, v) { \
     (rc).left = (rc).left - (v); \

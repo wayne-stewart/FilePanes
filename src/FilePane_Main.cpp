@@ -244,6 +244,12 @@ int PreDispatch_OnKeyPress(HWND hwnd, MSG *msg, bool down)
             ExplorerBrowser_HandleControlAKeyPress(pane);
         }
         break;
+    case 'C':
+        if (control_down) {
+            pane = FilePane_GetActiveExplorerPane();
+            ExplorerBrowser_HandleControlCKeyPress(pane);
+        }
+        break;
     default:
         return 1;
     }

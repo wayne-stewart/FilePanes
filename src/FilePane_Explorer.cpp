@@ -137,49 +137,37 @@ void ExplorerBrowser_SetPath(LPCWSTR path, Pane *pane)
 
 void ExplorerBrowser_HandleDeleteKeyPress(Pane *pane)
 {
-    if (pane == NULL || pane->content_type != PaneType::ExplorerBrowser) return;
+    CHECK_EXPLORER_BROWSER_HAS_FOCUS(pane);
 
-    // don't want to process the delete if the pane does not have focus
-    if (!pane->content.explorer.events->HasFocus()) return;
+    AutoRelease<IFolderView> folder_view;
+    AutoRelease<IShellItemArray> selected_items;
+    AutoRelease<IFileOperation> file_operation;
 
-    IFolderView *folder_view;
-    if (S_OK == pane->content.explorer.browser->GetCurrentView(IID_IFolderView, (LPVOID*)&folder_view))
-    {
-        IShellItemArray *selected_items;
-        if (S_OK == folder_view->Items(SVGIO_SELECTION, IID_IShellItemArray, (LPVOID*)&selected_items))
-        {
-            IFileOperation *file_operation;
-            if (SUCCEEDED(CreateAndInitializeFileOperation(IID_PPV_ARGS(&file_operation))))
-            {
-                if (SUCCEEDED(file_operation->DeleteItems(selected_items)))
-                {
-                    file_operation->PerformOperations();
-                }
-                file_operation->Release();
-            }
-            selected_items->Release();
-        }
-        folder_view->Release();
-    }
+    CHECK_S_OK(pane->content.explorer.browser->GetCurrentView(IID_IFolderView, folder_view));
+    CHECK_S_OK(folder_view->Items(SVGIO_SELECTION, IID_IShellItemArray, selected_items));
+    CHECK_S_OK(CreateAndInitializeFileOperation(IID_IFileOperation, file_operation));
+    CHECK_S_OK(file_operation->DeleteItems(selected_items));
+    CHECK_S_OK(file_operation->PerformOperations());
 }
 
 void ExplorerBrowser_HandleControlAKeyPress(Pane *pane)
 {
-    if (pane == NULL || pane->content_type != PaneType::ExplorerBrowser) return;
+    CHECK_EXPLORER_BROWSER_HAS_FOCUS(pane);
 
-    if (!pane->content.explorer.events->HasFocus()) return;
+    AutoRelease<IFolderView> folder_view;
+    int folder_item_count = 0;
 
-    IFolderView *folder_view;
-    if (SUCCEEDED(pane->content.explorer.browser->GetCurrentView(IID_PPV_ARGS(&folder_view))))
+    CHECK_S_OK(pane->content.explorer.browser->GetCurrentView(IID_IFolderView, folder_view));
+    CHECK_S_OK(folder_view->ItemCount(SVGIO_ALLVIEW, &folder_item_count));
+
+    for(int i = 0; i < folder_item_count; i++)
     {
-        int folder_item_count = 0;
-        if (SUCCEEDED(folder_view->ItemCount(SVGIO_ALLVIEW, &folder_item_count)))
-        {
-            for(int i = 0; i < folder_item_count; i++)
-            {
-                folder_view->SelectItem(i, SVSI_SELECT);
-            }
-        }
-        folder_view->Release();
+        folder_view->SelectItem(i, SVSI_SELECT);
     }
+}
+
+void ExplorerBrowser_HandleControlCKeyPress(Pane *pane)
+{
+    CHECK_EXPLORER_BROWSER_HAS_FOCUS(pane);
+    
 }
