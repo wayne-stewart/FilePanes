@@ -5,10 +5,12 @@ The goal of this project is to create a multi-paned file explorer using the wind
 
 ## v0.2 in progress
 - [x] handle delete key
-- [ ] handle ctl-a to select all
-- [ ] handle ctl-x to cut
-- [ ] handle ctl-c to copy
-- [ ] handle ctl-v to paste
+- [x] handle ctl-a to select all
+- [x] handle ctl-x to cut
+- [x] handle ctl-c to copy
+- [x] handle ctl-v to paste
+- [ ] handle more than 1024 items in copy/paste
+
 
 ## v0.1
 - [x] make a better app icon
@@ -27,7 +29,6 @@ The goal of this project is to create a multi-paned file explorer using the wind
 - [ ] add tool tip to folder explorer items
 - [ ] save multiple layout configurations
 - [ ] add item view options: list, details, icons 
-- [ ] add keyboard shortcuts for explorer pane ctl-a, delete, ctl-x, ctl-c, ctl-v
 - [ ] add paste/copy/delete/new folder buttons
 - [ ] new pane after split should be same directory of pane being split
 - [ ] hide buttons if they don't fit in pane width

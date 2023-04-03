@@ -29,9 +29,15 @@ cl.exe ../src/FilePane_Main.cpp /MT /Zi /Wall /WX /Qspectre /FeFilePanes_DEBUG.e
 set arg1=%1
 
 if %arg1%.==run. goto RUN
+if %arg1%.==debug. goto DEBUG
 goto END
 
 :RUN
 FilePanes.exe
+goto END
+
+:DEBUG
+FilePanes_DEBUG.exe
+goto END
 
 :END

@@ -135,8 +135,9 @@ void ExplorerBrowser_SetPath(LPCWSTR path, Pane *pane)
     }
 }
 
-void ExplorerBrowser_HandleDeleteKeyPress(Pane *pane)
+void ExplorerBrowser_HandleDeleteKeyPress()
 {
+    Pane *pane = FilePane_GetActiveExplorerPane();
     CHECK_EXPLORER_BROWSER_HAS_FOCUS(pane);
 
     AutoRelease<IFolderView> folder_view;
@@ -150,8 +151,9 @@ void ExplorerBrowser_HandleDeleteKeyPress(Pane *pane)
     CHECK_S_OK(file_operation->PerformOperations());
 }
 
-void ExplorerBrowser_HandleControlAKeyPress(Pane *pane)
+void ExplorerBrowser_HandleControlAKeyPress()
 {
+    Pane *pane = FilePane_GetActiveExplorerPane();
     CHECK_EXPLORER_BROWSER_HAS_FOCUS(pane);
 
     AutoRelease<IFolderView> folder_view;
@@ -166,8 +168,102 @@ void ExplorerBrowser_HandleControlAKeyPress(Pane *pane)
     }
 }
 
-void ExplorerBrowser_HandleControlCKeyPress(Pane *pane)
+void ExplorerBrowser_HandleControlCXKeyPress(DWORD drop_effect)
 {
+    Pane *pane = FilePane_GetActiveExplorerPane();
     CHECK_EXPLORER_BROWSER_HAS_FOCUS(pane);
-    
+    AutoRelease<IFolderView> folder_view;
+    AutoRelease<IShellFolder> shell_folder;
+    AutoRelease<IShellItem> folder_shell_item;
+    AutoRelease<IShellItemArray> selected_items;
+    AutoRelease<IFileOperation> file_operation;
+    AutoCoMemFree<ITEMIDLIST> folder_pidl;
+    DWORD selected_item_count = 0;
+    AutoRelease<IDataObject> data_object;
+    CHECK_S_OK(pane->content.explorer.browser->GetCurrentView(IID_IFolderView, folder_view));
+    CHECK_S_OK(folder_view->Items(SVGIO_SELECTION, IID_IShellItemArray, selected_items));
+    CHECK_S_OK(folder_view->GetFolder(IID_IShellItem, folder_shell_item));
+    CHECK_S_OK(SHGetIDListFromObject(folder_shell_item, folder_pidl));
+    CHECK_S_OK(selected_items->GetCount(&selected_item_count));
+    if (selected_item_count == 0) return;
+
+    LPCITEMIDLIST selected_items_pidl[1024] = {};
+    for(DWORD i = 0; i < selected_item_count && i < 1024; i++) {
+        IShellItem *shell_item;
+        if (S_OK == selected_items->GetItemAt(i, &shell_item)) {
+            LPITEMIDLIST pidl;
+            SHGetIDListFromObject(shell_item, &pidl);
+            selected_items_pidl[i] = pidl;
+            shell_item->Release();
+        }
+    }
+
+    AutoRelease<IShellFolder> shell_desktop;
+    CHECK_S_OK(SHGetDesktopFolder(&shell_desktop));
+    CHECK_S_OK(shell_desktop->GetUIObjectOf(NULL, selected_item_count, selected_items_pidl, IID_IDataObject, NULL, data_object));
+
+    FORMATETC format = {};
+    format.cfFormat = CF_PREFFEREDDROPEFFECT;
+    format.tymed = TYMED_HGLOBAL;
+    format.dwAspect = DVASPECT_CONTENT;
+    format.lindex = -1;
+
+    STGMEDIUM medium = {};
+    DWORD *pde = (DWORD*)GlobalAlloc(GPTR, sizeof(DWORD));
+    *pde = drop_effect;
+    medium.hGlobal = pde;
+    medium.tymed = TYMED_HGLOBAL;
+    medium.pUnkForRelease = NULL;
+
+    if (FAILED(data_object->SetData(&format, &medium, TRUE))) {
+         GlobalFree(pde);
+         DEBUGWRITE(L"SetData failed when writing drop effect");
+         return;
+    }
+
+    CHECK_S_OK(OleSetClipboard(data_object));
+
+    DEBUGWRITE(L"ExplorerBrowser_HandleControlCXKeyPress success");
 }
+
+void ExplorerBrowser_HandleControlVKeyPress()
+{
+    Pane *pane = FilePane_GetActiveExplorerPane();
+    CHECK_EXPLORER_BROWSER(pane);
+
+    AutoRelease<IDataObject> clipboard_object;
+    AutoRelease<IFolderView> folder_view;
+    AutoRelease<IFileOperation> file_operation;
+    AutoRelease<IShellItem> destination_shell_item;
+
+    CHECK_S_OK(OleGetClipboard(clipboard_object));
+
+    FORMATETC format = {};
+    STGMEDIUM stgmedium = {};
+    LPVOID global_value = 0;
+    DWORD drop_effect = 0;
+
+    format.cfFormat = CF_PREFFEREDDROPEFFECT;
+    format.tymed = TYMED_HGLOBAL;
+    format.dwAspect = DVASPECT_CONTENT;
+
+    CHECK_S_OK(clipboard_object->GetData(&format, &stgmedium));
+    global_value = GlobalLock(stgmedium.hGlobal);
+    drop_effect = *(DWORD*)global_value;
+    GlobalUnlock(stgmedium.hGlobal);
+    ReleaseStgMedium(&stgmedium);
+
+    CHECK_S_OK(pane->content.explorer.browser->GetCurrentView(IID_IFolderView, folder_view));
+    CHECK_S_OK(CreateAndInitializeFileOperation(IID_IFileOperation, file_operation));
+    CHECK_S_OK(folder_view->GetFolder(IID_IShellItem, destination_shell_item));
+    if ((drop_effect & DROPEFFECT_COPY) == DROPEFFECT_COPY) {
+        CHECK_S_OK(file_operation->CopyItems(clipboard_object, destination_shell_item));
+    }
+    else if ((drop_effect & DROPEFFECT_MOVE) == DROPEFFECT_MOVE) {
+        CHECK_S_OK(file_operation->MoveItems(clipboard_object, destination_shell_item));
+    }
+    CHECK_S_OK(file_operation->PerformOperations());
+
+    DEBUGWRITE(L"ExplorerBrowser_HandleControlVKeyPress success");
+}
+

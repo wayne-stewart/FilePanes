@@ -226,32 +226,20 @@ int PreDispatch_OnKeyPress(HWND hwnd, MSG *msg, bool down)
     UNREFERENCED_PARAMETER(hwnd);
     static bool control_down = false;
 
-    Pane *pane;
     switch(msg->wParam)
     {
-    case VK_DELETE:
-        if (down) {
-            pane = FilePane_GetActiveExplorerPane();
-            ExplorerBrowser_HandleDeleteKeyPress(pane);
-        }
-        break;
-    case VK_CONTROL:
-        control_down = down;
-    break;
-    case 'A':
-        if (control_down) {
-            pane = FilePane_GetActiveExplorerPane();
-            ExplorerBrowser_HandleControlAKeyPress(pane);
-        }
-        break;
-    case 'C':
-        if (control_down) {
-            pane = FilePane_GetActiveExplorerPane();
-            ExplorerBrowser_HandleControlCKeyPress(pane);
-        }
-        break;
-    default:
-        return 1;
+    case VK_DELETE: 
+        if (down) ExplorerBrowser_HandleDeleteKeyPress(); break;
+    case VK_CONTROL: 
+        control_down = down; break;
+    case 'A': 
+        if (control_down && down) ExplorerBrowser_HandleControlAKeyPress(); break;
+    case 'C': 
+        if (control_down && down) ExplorerBrowser_HandleControlCXKeyPress(DROPEFFECT_COPY); break;
+    case 'X':
+        if (control_down && down) ExplorerBrowser_HandleControlCXKeyPress(DROPEFFECT_MOVE); break;
+    case 'V': 
+        if (control_down && down) ExplorerBrowser_HandleControlVKeyPress(); break;
     }
     return 1;
 }
@@ -384,6 +372,8 @@ wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdS
     g_idc_sizens = LoadCursorW(0, IDC_SIZENS);
     g_idc_sizewe = LoadCursorW(0, IDC_SIZEWE);
     g_idc_arrow = LoadCursorW(0, IDC_ARROW);
+
+    CF_PREFFEREDDROPEFFECT = (CLIPFORMAT)RegisterClipboardFormat(CFSTR_PREFERREDDROPEFFECT);
 
     hwnd = CreateMainWindow(hInstance);
     FilePane_LoadState();

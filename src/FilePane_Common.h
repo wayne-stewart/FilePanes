@@ -76,18 +76,40 @@ using Gdiplus::GdiplusStartup;
     OutputDebugStringW(dbg_buf); }
 
 template <typename T>
-class AutoRelease
+struct AutoRelease
 {
-private:
     T *instance;
-public:
     AutoRelease() { instance = nullptr; }
     AutoRelease(const AutoRelease&) = delete;
-    ~AutoRelease() { DEBUGWRITE(L"auto release destructor called"); if (instance) { instance->Release(); } }
+    ~AutoRelease() { if (instance) { instance->Release(); } }
     operator LPVOID*() const { return (LPVOID*)&instance; }
+    operator LPDATAOBJECT*() const { return (LPDATAOBJECT*)&instance; }
+    operator T*() const { return instance; }
     operator IUnknown*() const { return instance; }
     T *operator->() const { return instance; }
+    T **operator&() { return &instance; }
 };
+
+template<typename T>
+struct AutoCoMemFree
+{
+    T *instance;
+    AutoCoMemFree() { instance = nullptr; }
+    AutoCoMemFree(const AutoCoMemFree&) = delete;
+    ~AutoCoMemFree() { if (instance) { CoTaskMemFree(instance); } }
+    operator LPVOID*() const { return (LPVOID*)&instance; }
+    operator LPITEMIDLIST*() const { return (LPITEMIDLIST*)&instance; }
+    operator LPCITEMIDLIST*() const { return (LPCITEMIDLIST*)&instance; }
+    operator T*() const { return instance; }
+    T *operator->() const { return instance; }
+};
+
+// struct defer_dummy {};
+// template <class F> struct deferrer { F f; ~deferrer() { DEBUGWRITE(L"deferred function called"); f(); } };
+// template <class F> deferrer<F> operator*(defer_dummy, F f) { return {f}; }
+// #define DEFER_(LINE) zz_defer##LINE
+// #define DEFER(LINE) DEFER_(LINE)
+// #define defer auto DEFER(__LINE__) = defer_dummy{} *[&]()
 
 enum SplitDirection {
     Vertical = 0,
@@ -282,6 +304,7 @@ void InitFolderBrowserPaneUI(Pane *pane);
 /// GLOBAL STATE
 HWND g_main_window_hwnd;
 HINSTANCE g_hinstance;
+CLIPFORMAT CF_PREFFEREDDROPEFFECT;
 
 #define MAX_PANES 50
 int g_panes_count = 0;
@@ -410,11 +433,15 @@ void Alert(UINT type, LPCWSTR caption, LPCWSTR format, ...)
     if (pane->content_type == PaneType::Container) {
 #define END_ENUM_CONTAINERS }}
 
+#define CHECK_EXPLORER_BROWSER(pane) \
+    if (pane == NULL || pane->content_type != PaneType::ExplorerBrowser) return
+
 #define CHECK_EXPLORER_BROWSER_HAS_FOCUS(pane) \
-    if (pane == NULL || pane->content_type != PaneType::ExplorerBrowser) return; \
+    CHECK_EXPLORER_BROWSER(pane); \
     if (!pane->content.explorer.events->HasFocus()) return
 
 #define CHECK_S_OK(expr) if ((expr) != S_OK) return
+#define CHECK_NOT_NULL(expr) if ((expr) != NULL) return
 
 #define EXPAND_RECT(rc, v) { \
     (rc).left = (rc).left - (v); \
