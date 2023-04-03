@@ -178,29 +178,29 @@ void ExplorerBrowser_HandleControlCXKeyPress(DWORD drop_effect)
     AutoRelease<IShellItemArray> selected_items;
     AutoRelease<IFileOperation> file_operation;
     AutoCoMemFree<ITEMIDLIST> folder_pidl;
-    DWORD selected_item_count = 0;
+    DWORD cidl = 0;
     AutoRelease<IDataObject> data_object;
     CHECK_S_OK(pane->content.explorer.browser->GetCurrentView(IID_IFolderView, folder_view));
     CHECK_S_OK(folder_view->Items(SVGIO_SELECTION, IID_IShellItemArray, selected_items));
     CHECK_S_OK(folder_view->GetFolder(IID_IShellItem, folder_shell_item));
     CHECK_S_OK(SHGetIDListFromObject(folder_shell_item, folder_pidl));
-    CHECK_S_OK(selected_items->GetCount(&selected_item_count));
-    if (selected_item_count == 0) return;
+    CHECK_S_OK(selected_items->GetCount(&cidl));
+    if (cidl == 0) return;
 
-    LPCITEMIDLIST selected_items_pidl[1024] = {};
-    for(DWORD i = 0; i < selected_item_count && i < 1024; i++) {
+    AutoLocalFree<HLOCAL> item_mem(LocalAlloc(GPTR, sizeof(LPITEMIDLIST) * cidl));
+    LPITEMIDLIST *items = (LPITEMIDLIST*)item_mem.instance;
+    for(DWORD i = 0; i < cidl; i++) {
         IShellItem *shell_item;
         if (S_OK == selected_items->GetItemAt(i, &shell_item)) {
-            LPITEMIDLIST pidl;
-            SHGetIDListFromObject(shell_item, &pidl);
-            selected_items_pidl[i] = pidl;
+            SHGetIDListFromObject(shell_item, &items[i]);
             shell_item->Release();
         }
     }
+    LPCITEMIDLIST *apidl = (LPCITEMIDLIST*)(void*)items;
 
     AutoRelease<IShellFolder> shell_desktop;
     CHECK_S_OK(SHGetDesktopFolder(&shell_desktop));
-    CHECK_S_OK(shell_desktop->GetUIObjectOf(NULL, selected_item_count, selected_items_pidl, IID_IDataObject, NULL, data_object));
+    CHECK_S_OK(shell_desktop->GetUIObjectOf(NULL, cidl, apidl, IID_IDataObject, NULL, data_object));
 
     FORMATETC format = {};
     format.cfFormat = CF_PREFFEREDDROPEFFECT;

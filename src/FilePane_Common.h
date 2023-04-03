@@ -104,6 +104,17 @@ struct AutoCoMemFree
     T *operator->() const { return instance; }
 };
 
+template<typename T>
+struct AutoLocalFree
+{
+    T *instance;
+    AutoLocalFree() { instance = nullptr; }
+    AutoLocalFree(HLOCAL instance) { this->instance = (T*)instance; }
+    AutoLocalFree(const AutoLocalFree&) = delete;
+    ~AutoLocalFree() { if (instance) { LocalFree(instance); } }
+    operator T*() const { return instance; }
+};
+
 // struct defer_dummy {};
 // template <class F> struct deferrer { F f; ~deferrer() { DEBUGWRITE(L"deferred function called"); f(); } };
 // template <class F> deferrer<F> operator*(defer_dummy, F f) { return {f}; }

@@ -9,7 +9,7 @@ The goal of this project is to create a multi-paned file explorer using the wind
 - [x] handle ctl-x to cut
 - [x] handle ctl-c to copy
 - [x] handle ctl-v to paste
-- [ ] handle more than 1024 items in copy/paste
+- [x] copy/paste now uses dynamically allocated memory to avoid artificial limitations
 
 
 ## v0.1
