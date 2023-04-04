@@ -10,6 +10,15 @@ The goal of this project is to create a multi-paned file explorer using the wind
 - [x] handle ctl-c to copy
 - [x] handle ctl-v to paste
 - [x] copy/paste now uses dynamically allocated memory to avoid artificial limitations
+- [ ] add status bar for each pane
+- [ ] show number of items in view and number of items selected
+- [ ] add buttons for changing view mode to status bar
+- [ ] folder browser updates
+- [ ] - auto detect drive changes
+- [ ] - add favorites/quick access
+- [ ] - default should just show drive letters and home
+- [ ] show network login for remote shares
+- [ ] new pane after split should be same directory of pane being split
 
 
 ## v0.1
@@ -26,19 +35,14 @@ The goal of this project is to create a multi-paned file explorer using the wind
 
 
 # TODO
-- [ ] add tool tip to folder explorer items
 - [ ] save multiple layout configurations
-- [ ] add item view options: list, details, icons 
 - [ ] add paste/copy/delete/new folder buttons
-- [ ] new pane after split should be same directory of pane being split
 - [ ] hide buttons if they don't fit in pane width
-- [ ] add drop down to expose more buttons ( kins of like a ribbon? )
-- [ ] save network login information for future use and integrate with the explorer browser control. Is this possible?
+- [ ] add drop down to expose more buttons ( kind of like a ribbon? )
 - [ ] implement clean update strategy based on github releases?
 - [ ] add preview pane
 - [ ] add console pane
 - [ ] add search
-- [ ] add favorites/quick access
 - [ ] click path parts in address bar to naviate
 - [ ] add address bar history
 - [ ] add custom actions ( menu or toolbar ?)
