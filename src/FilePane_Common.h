@@ -182,9 +182,11 @@ struct ButtonID {
     ButtonFunction function;
 };
 
-class ExplorerBrowserEvents : public IServiceProvider, public IExplorerBrowserEvents , public ICommDlgBrowser//, public ICommDlgBrowser2
+class ExplorerBrowserEvents : public IServiceProvider, public IExplorerBrowserEvents, public ICommDlgBrowser2, public IExplorerPaneVisibility
 {
 public:
+    virtual ~ExplorerBrowserEvents(){}
+
     void SetPaneId(int id);
     bool HasFocus();
 
@@ -207,9 +209,14 @@ public:
     HRESULT OnDefaultCommand(IShellView *shell_view);
     HRESULT OnStateChange(IShellView *shell_view, ULONG uChange);
 
-    // fix compiler warning 5204 about not having a virtual deconstructor
-    // in case this class is subclassed.
-    virtual ~ExplorerBrowserEvents() { }
+    // ICommDlgBrowser2
+    HRESULT Notify(IShellView *shell_view, DWORD dwNotifyType);
+    HRESULT GetDefaultMenuText(IShellView *shell_view, LPWSTR pszText, int cchMax);
+    HRESULT GetViewFlags(DWORD *pdwFlags);
+
+    // IExplorerPaneVisibility
+    IFACEMETHODIMP GetPaneState(REFEXPLORERPANE ep, EXPLORERPANESTATE *peps);
+
 private:
     long _cRef;
     int _pane_id;

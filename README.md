@@ -10,9 +10,7 @@ The goal of this project is to create a multi-paned file explorer using the wind
 - [x] handle ctl-c to copy
 - [x] handle ctl-v to paste
 - [x] copy/paste now uses dynamically allocated memory to avoid artificial limitations
-- [ ] add status bar for each pane
-- [ ] show number of items in view and number of items selected
-- [ ] add buttons for changing view mode to status bar
+- [x] show default windows explorer status bar in each explorer pane
 - [ ] folder browser updates
 - [ ] - auto detect drive changes
 - [ ] - add favorites/quick access

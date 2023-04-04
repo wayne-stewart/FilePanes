@@ -56,6 +56,7 @@ void ComputeLayout(RECT *rc, Pane *pane)
         SHRINK_RECT(pane->rc, HALF_FRAME_WIDTH);
         
         int button_dim = 30;
+        int status_dim = 0;
 
         RECT pos, offset;
         pos.left = pane->rc.left;
@@ -95,7 +96,7 @@ void ComputeLayout(RECT *rc, Pane *pane)
         pos.left = pane->rc.left;
         pos.right = pane->rc.right;
         pos.top = pos.bottom;
-        pos.bottom = pane->rc.bottom;
+        pos.bottom = pane->rc.bottom - status_dim;
         pane->content.explorer.browser->SetRect(NULL, pos);
     } else if (pane->content_type == PaneType::FolderBrowser) {
         pane->rc = *rc;

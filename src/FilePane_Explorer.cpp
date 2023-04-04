@@ -18,6 +18,8 @@ IFACEMETHODIMP ExplorerBrowserEvents::QueryInterface(REFIID riid, void **ppv)
         QITABENT(ExplorerBrowserEvents, IServiceProvider),
         QITABENT(ExplorerBrowserEvents, IExplorerBrowserEvents),
         QITABENT(ExplorerBrowserEvents, ICommDlgBrowser),
+        QITABENT(ExplorerBrowserEvents, ICommDlgBrowser2),
+        QITABENT(ExplorerBrowserEvents, IExplorerPaneVisibility),
         { 0 },
     };
     return QISearch(this, qit, riid, ppv);
@@ -45,6 +47,10 @@ IFACEMETHODIMP ExplorerBrowserEvents::QueryService(REFGUID guidService, REFIID r
 
     HRESULT hr = E_NOINTERFACE;
     if (guidService == SID_SExplorerBrowserFrame)
+    {
+        hr = QueryInterface(riid, ppv);
+    }
+    else if (guidService == SID_ExplorerPaneVisibility)
     {
         hr = QueryInterface(riid, ppv);
     }
@@ -85,12 +91,14 @@ HRESULT ExplorerBrowserEvents::IncludeObject(IShellView *shell_view, PCUITEMID_C
     UNREFERENCED_PARAMETER(pidl);
     return E_NOTIMPL;
 }
+
 HRESULT ExplorerBrowserEvents::OnDefaultCommand(IShellView *shell_view)
 {
     UNREFERENCED_PARAMETER(shell_view);
     //DEBUGALERT(L"DEFAULT COMMAND HAPPENED");
     return E_NOTIMPL;
 }
+
 HRESULT ExplorerBrowserEvents::OnStateChange(IShellView *shell_view, ULONG uChange)
 {
     UNREFERENCED_PARAMETER(shell_view);
@@ -121,6 +129,43 @@ HRESULT ExplorerBrowserEvents::OnStateChange(IShellView *shell_view, ULONG uChan
     }
     return S_OK;
 }
+
+// ICommDlgBrowser2
+HRESULT ExplorerBrowserEvents::Notify(IShellView *shell_view, DWORD notify_type)
+{
+    UNREFERENCED_PARAMETER(shell_view);
+    UNREFERENCED_PARAMETER(notify_type);
+    return E_NOTIMPL;
+}
+
+HRESULT ExplorerBrowserEvents::GetDefaultMenuText(IShellView *shell_view, WCHAR *buffer, int buffer_size)
+{
+    UNREFERENCED_PARAMETER(shell_view);
+    UNREFERENCED_PARAMETER(buffer);
+    UNREFERENCED_PARAMETER(buffer_size);
+    return E_NOTIMPL;
+}
+
+HRESULT ExplorerBrowserEvents::GetViewFlags(DWORD *flags)
+{
+    *flags = CDB2GVF_SHOWALLFILES;
+    return S_OK;
+}
+
+// IExplorerPaneVisibility
+IFACEMETHODIMP ExplorerBrowserEvents::GetPaneState(REFEXPLORERPANE ep, EXPLORERPANESTATE *peps)
+{
+    if (ep == EP_NavPane || ep == EP_Commands || ep == EP_Commands_Organize || ep == EP_Commands_View)
+    {
+        *peps = EPS_FORCE | EPS_DEFAULT_OFF;
+    }
+    else
+    {
+        *peps = EPS_DONTCARE;
+    }
+    return S_OK;
+}
+
 
 void ExplorerBrowser_SetPath(LPCWSTR path, Pane *pane)
 {
@@ -266,4 +311,3 @@ void ExplorerBrowser_HandleControlVKeyPress()
 
     DEBUGWRITE(L"ExplorerBrowser_HandleControlVKeyPress success");
 }
-

@@ -179,7 +179,7 @@ void InitExplorerBrowserPaneUI(Pane *pane, LPCWSTR path)
     FOLDERSETTINGS fs = {};
     fs.ViewMode = FVM_DETAILS;// FVM_LIST; // FVM_CONTENT; //FVM_ICON; // FVM_DETAILS;
     fs.fFlags = FWF_NOWEBVIEW; // | FWF_NOCOLUMNHEADER;
-    browser->SetOptions(EBO_NOBORDER | EBO_NOWRAPPERWINDOW);
+    browser->SetOptions(EBO_NOBORDER | EBO_NOWRAPPERWINDOW | EBO_SHOWFRAMES);
     browser->Initialize(g_main_window_hwnd, &pane->rc, &fs);
 
     // subscribe to events from the explorer window
