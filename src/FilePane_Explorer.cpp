@@ -81,6 +81,8 @@ IFACEMETHODIMP ExplorerBrowserEvents::OnNavigationComplete(PCIDLIST_ABSOLUTE pid
 
 IFACEMETHODIMP ExplorerBrowserEvents::OnNavigationFailed(PCIDLIST_ABSOLUTE /* pidlFolder */)
 {
+    DEBUGWRITE(L"NAVIGATION FAILED");
+
     return E_NOTIMPL;
 }
 
@@ -311,3 +313,4 @@ void ExplorerBrowser_HandleControlVKeyPress()
 
     DEBUGWRITE(L"ExplorerBrowser_HandleControlVKeyPress success");
 }
+

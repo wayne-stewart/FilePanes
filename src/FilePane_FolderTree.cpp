@@ -273,8 +273,64 @@ FolderBrowser_InsertItem(FolderBrowserTree *tree, SHFILEINFOW *item, HTREEITEM p
     return hti;
 }
 
+HTREEITEM 
+FolderBrowser_InsertText(FolderBrowserTree *tree, LPCWSTR text, HTREEITEM parent, HTREEITEM prev, FolderItemData *data)
+{
+    TVITEMW tvi = {};
+    TVINSERTSTRUCTW tvins = {};
+    HTREEITEM hti = {};
+
+    tvi.mask = TVIF_TEXT | TVIF_PARAM | TVIF_CHILDREN | TVIF_STATE; //  | TVIF_IMAGE
+
+    tvi.pszText = (LPWSTR)text;
+    tvi.cchTextMax = (int)wcslen(text);
+    //tvi.iImage = item->iIcon;
+    tvi.lParam = LPARAM(data);
+    tvi.cChildren = 1;
+    tvi.state = 0;
+    tvins.item = tvi;
+    tvins.hParent = parent;
+    tvins.hInsertAfter = prev;
+
+    hti = (HTREEITEM)SendMessage(tree->hwnd, TVM_INSERTITEMW, 0, (LPARAM)(LPTVINSERTSTRUCTW)&tvins);
+
+    return hti;
+}
+
+/* this function should get fill an array of ITEMIDLIST data structures
+   with the logical drives found on the sytem */
+void FindDrives(PIDLIST_ABSOLUTE *pidls, int count_max, int *count_found)
+{
+    WCHAR drives[MAX_PATH] = {};
+    GetLogicalDriveStringsW(ARRAYSIZE(drives), drives);
+    WCHAR *drive = drives;
+    int i = 0;
+    while (*drive && i < count_max)
+    {
+        pidls[i] = ILCreateFromPathW(drive);
+        drive += wcslen(drive) + 1;
+        i++;
+    }
+    *count_found = i;
+}
+
+/* this functions should find all folders the current user has marked
+   for quick access in file explorer */
+void FindQuickAccess(PIDLIST_ABSOLUTE *pidls, int count_max, int *count_found)
+{
+    ASSERT(count_max >= 2,L"count_max must be at least 2");
+    LPITEMIDLIST pidl;
+    int i = 0;
+    if (SUCCEEDED(SHGetKnownFolderIDList(FOLDERID_OneDrive, NULL, NULL, &pidl)))
+        pidls[i++] = pidl;
+    if (SUCCEEDED(SHGetKnownFolderIDList(FOLDERID_UsersFiles, NULL, NULL, &pidl)))
+        pidls[i++] = pidl;
+
+    *count_found = i;
+}
+
 void 
-FolderBrowser_FillRoot(FolderBrowserTree *tree)
+FolderBrowser_FillRoot_v1(FolderBrowserTree *tree)
 {
     HRESULT hr;
     LPITEMIDLIST folder_pidl, item_pidl, abs_pidl;
@@ -290,6 +346,7 @@ FolderBrowser_FillRoot(FolderBrowserTree *tree)
     hr = SHGetSpecialFolderLocation(NULL, CSIDL_DRIVES, &folder_pidl);
 
     desktop_shell_folder->BindToObject(folder_pidl, NULL, IID_IShellFolder, (void **)&drives_shell_folder);
+    
 
     hr = drives_shell_folder->EnumObjects(NULL, SHCONTF_FOLDERS, &enum_id_list);
     if FAILED(hr) { MessageBoxW(NULL, L"desktop_shell_folder->EnumObjects failed", L"Error", MB_OK); return; }
@@ -318,6 +375,68 @@ FolderBrowser_FillRoot(FolderBrowserTree *tree)
     drives_shell_folder->Release();
     enum_id_list->Release();
     CoTaskMemFree(folder_pidl);
+}
+
+void 
+FolderBrowser_FillRoot(FolderBrowserTree *tree)
+{
+    LPITEMIDLIST abs_pidl;
+    SHFILEINFOW shell_file_info;
+    HTREEITEM prev = NULL;
+    HTREEITEM quick_access_item = NULL;
+
+    ITEMIDLIST *pidls[26];
+    int count_found = 0;
+
+    FindQuickAccess(pidls, ARRAYSIZE(pidls), &count_found);
+    if (count_found > 0)
+    {
+        FolderItemData *quick_access_data = (FolderItemData*)calloc(1, sizeof(FolderItemData));
+        quick_access_data->level = 0;
+        quick_access_data->has_items = true;
+        quick_access_data->items_checked = true;
+        quick_access_item = FolderBrowser_InsertText(tree, L"Quick Access", TVI_ROOT, prev, quick_access_data);
+        for(int i = 0; i < count_found; i++)
+        {
+            RunMainWindowLoopWhileMessagesExist();
+
+            abs_pidl = pidls[i];
+            SHGetFileInfoW((LPCWSTR)abs_pidl,
+                0 // dwFileAttributes
+                ,&shell_file_info
+                ,sizeof(SHFILEINFOW)
+                ,SHGFI_PIDL|SHGFI_DISPLAYNAME|SHGFI_ATTRIBUTES|SHGFI_SYSICONINDEX|SHGFI_ICON); //  | SHGFI_LARGEICON
+            
+            FolderItemData *data = (FolderItemData*)calloc(1, sizeof(FolderItemData));
+            data->level = 1;
+            SHGetPathFromIDListW(abs_pidl, data->path);
+            prev = FolderBrowser_InsertItem(tree, &shell_file_info, quick_access_item, prev, data);
+
+            CoTaskMemFree(abs_pidl);
+        }
+        prev = quick_access_item;
+    }
+
+    FindDrives(pidls, ARRAYSIZE(pidls), &count_found);
+
+    for(int i = 0; i < count_found; i++)
+    {
+        RunMainWindowLoopWhileMessagesExist();
+
+        abs_pidl = pidls[i];
+        SHGetFileInfoW((LPCWSTR)abs_pidl,
+            0 // dwFileAttributes
+            ,&shell_file_info
+            ,sizeof(SHFILEINFOW)
+            ,SHGFI_PIDL|SHGFI_DISPLAYNAME|SHGFI_ATTRIBUTES|SHGFI_SYSICONINDEX|SHGFI_ICON); //  | SHGFI_LARGEICON
+
+        FolderItemData *data = (FolderItemData*)calloc(1, sizeof(FolderItemData));
+        data->level = 0;
+        SHGetPathFromIDListW(abs_pidl, data->path);
+        prev = FolderBrowser_InsertItem(tree, &shell_file_info, TVI_ROOT, prev, data);
+
+        CoTaskMemFree(abs_pidl);
+    }
 }
 
 void 
