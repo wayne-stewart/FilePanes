@@ -14,7 +14,8 @@ The goal of this project is to create a multi-paned file explorer using the wind
 - [ ] folder browser updates
 - [ ] - auto detect drive changes
 - [ ] - add favorites/quick access
-- [ ] - default should just show drive letters and home
+- [x] - default should just show drive letters and home
+- [x] - integrate one drive
 - [ ] show network login for remote shares
 - [ ] new pane after split should be same directory of pane being split
 
@@ -46,7 +47,6 @@ The goal of this project is to create a multi-paned file explorer using the wind
 - [ ] add custom actions ( menu or toolbar ?)
 - [ ] customize explorer details columns
 - [ ] add batch regx based rename with preview
-- [ ] integrate one drive
 - [ ] integrate iCloud drive
 - [ ] make exploring 7z archives transparent like zip files
 - [ ] move opening a folder location in tree out of main thread so when it takes a long time like HDD spin up or network access doesn't block the main thread.
