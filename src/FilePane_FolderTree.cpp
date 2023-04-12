@@ -280,11 +280,11 @@ FolderBrowser_InsertText(FolderBrowserTree *tree, LPCWSTR text, HTREEITEM parent
     TVINSERTSTRUCTW tvins = {};
     HTREEITEM hti = {};
 
-    tvi.mask = TVIF_TEXT | TVIF_PARAM | TVIF_CHILDREN | TVIF_STATE; //  | TVIF_IMAGE
+    tvi.mask = TVIF_TEXT | TVIF_IMAGE | TVIF_PARAM | TVIF_CHILDREN | TVIF_STATE;
 
     tvi.pszText = (LPWSTR)text;
     tvi.cchTextMax = (int)wcslen(text);
-    //tvi.iImage = item->iIcon;
+    tvi.iImage = 69; // 3 yellow folder, 15 monitor, 22 magnifier glass, 31 recycle bin, 43 yellow star, 69 quick access
     tvi.lParam = LPARAM(data);
     tvi.cChildren = 1;
     tvi.state = 0;
@@ -321,61 +321,96 @@ void FindQuickAccess(PIDLIST_ABSOLUTE *pidls, int count_max, int *count_found)
     ASSERT(count_max >= 2,L"count_max must be at least 2");
     LPITEMIDLIST pidl;
     int i = 0;
-    if (SUCCEEDED(SHGetKnownFolderIDList(FOLDERID_OneDrive, NULL, NULL, &pidl)))
+    DWORD pdwType;
+    wchar_t path_buffer[MAX_PATH] = {};
+    DWORD path_buffer_size = ARRAYSIZE(path_buffer) * 2;
+
+    // One Drive
+    if (ERROR_SUCCESS == SHRegGetUSValue(L"Software\\Microsoft\\OneDrive\\Accounts\\Personal", L"UserFolder", 
+        &pdwType, &path_buffer, &path_buffer_size, FALSE, NULL, NULL))
+    {
+        pidl = ILCreateFromPath(path_buffer);
         pidls[i++] = pidl;
+    }
+    // Business One Drive
+    if (ERROR_SUCCESS == SHRegGetUSValue(L"Software\\Microsoft\\OneDrive\\Accounts\\Business1", L"UserFolder", 
+        &pdwType, &path_buffer, &path_buffer_size, FALSE, NULL, NULL))
+    {
+        pidl = ILCreateFromPath(path_buffer);
+        pidls[i++] = pidl;
+    }
+
+    // Business One Drive
+    if (ERROR_SUCCESS == SHRegGetUSValue(L"Software\\Microsoft\\OneDrive\\Accounts\\Business2", L"UserFolder", 
+        &pdwType, &path_buffer, &path_buffer_size, FALSE, NULL, NULL))
+    {
+        pidl = ILCreateFromPath(path_buffer);
+        pidls[i++] = pidl;
+    }
+
+    // Business One Drive
+    if (ERROR_SUCCESS == SHRegGetUSValue(L"Software\\Microsoft\\OneDrive\\Accounts\\Business3", L"UserFolder", 
+        &pdwType, &path_buffer, &path_buffer_size, FALSE, NULL, NULL))
+    {
+        pidl = ILCreateFromPath(path_buffer);
+        pidls[i++] = pidl;
+    }
+
+    // if (SUCCEEDED(SHGetKnownFolderIDList(FOLDERID_OneDrive, NULL, NULL, &pidl)))
+    //     pidls[i++] = pidl;
     if (SUCCEEDED(SHGetKnownFolderIDList(FOLDERID_UsersFiles, NULL, NULL, &pidl)))
         pidls[i++] = pidl;
 
     *count_found = i;
 }
 
-void 
-FolderBrowser_FillRoot_v1(FolderBrowserTree *tree)
-{
-    HRESULT hr;
-    LPITEMIDLIST folder_pidl, item_pidl, abs_pidl;
-    IShellFolder *desktop_shell_folder;
-    IShellFolder *drives_shell_folder;
-    IEnumIDList *enum_id_list;
-    SHFILEINFOW shell_file_info;
-    HTREEITEM prev = NULL;
+// void 
+// FolderBrowser_FillRoot_v1(FolderBrowserTree *tree)
+// {
+//     HRESULT hr;
+//     LPITEMIDLIST folder_pidl, item_pidl, abs_pidl;
+//     IShellFolder *desktop_shell_folder;
+//     IShellFolder *drives_shell_folder;
+//     IEnumIDList *enum_id_list;
+//     SHFILEINFOW shell_file_info;
+//     HTREEITEM prev = NULL;
 
-    hr = SHGetDesktopFolder(&desktop_shell_folder);
-    if FAILED(hr) { MessageBoxW(NULL, L"SHGetDesktopFolder failed", L"Error", MB_OK); return; }
+//     hr = SHGetDesktopFolder(&desktop_shell_folder);
+//     if FAILED(hr) { MessageBoxW(NULL, L"SHGetDesktopFolder failed", L"Error", MB_OK); return; }
 
-    hr = SHGetSpecialFolderLocation(NULL, CSIDL_DRIVES, &folder_pidl);
+//     hr = SHGetSpecialFolderLocation(NULL, CSIDL_DRIVES, &folder_pidl);
 
-    desktop_shell_folder->BindToObject(folder_pidl, NULL, IID_IShellFolder, (void **)&drives_shell_folder);
+//     desktop_shell_folder->BindToObject(folder_pidl, NULL, IID_IShellFolder, (void **)&drives_shell_folder);
     
 
-    hr = drives_shell_folder->EnumObjects(NULL, SHCONTF_FOLDERS, &enum_id_list);
-    if FAILED(hr) { MessageBoxW(NULL, L"desktop_shell_folder->EnumObjects failed", L"Error", MB_OK); return; }
+//     hr = drives_shell_folder->EnumObjects(NULL, SHCONTF_FOLDERS, &enum_id_list);
+//     if FAILED(hr) { MessageBoxW(NULL, L"desktop_shell_folder->EnumObjects failed", L"Error", MB_OK); return; }
 
-    while (S_OK == enum_id_list->Next(1, &item_pidl, NULL))
-    {
-        RunMainWindowLoopWhileMessagesExist();
+//     while (S_OK == enum_id_list->Next(1, &item_pidl, NULL))
+//     {
+//         RunMainWindowLoopWhileMessagesExist();
 
-        abs_pidl = ILCombine(folder_pidl, item_pidl);
-        SHGetFileInfoW((LPCWSTR)abs_pidl,
-            0 // dwFileAttributes
-            ,&shell_file_info
-            ,sizeof(SHFILEINFOW)
-            ,SHGFI_PIDL|SHGFI_DISPLAYNAME|SHGFI_ATTRIBUTES|SHGFI_SYSICONINDEX|SHGFI_ICON); //  | SHGFI_LARGEICON
+//         abs_pidl = ILCombine(folder_pidl, item_pidl);
+//         SHGetFileInfoW((LPCWSTR)abs_pidl,
+//             0 // dwFileAttributes
+//             ,&shell_file_info
+//             ,sizeof(SHFILEINFOW)
+//             ,SHGFI_PIDL|SHGFI_DISPLAYNAME|SHGFI_ATTRIBUTES|SHGFI_SYSICONINDEX|SHGFI_ICON); //  | SHGFI_LARGEICON
 
-        FolderItemData *data = (FolderItemData*)calloc(1, sizeof(FolderItemData));
-        data->level = 0;
-        SHGetPathFromIDListW(abs_pidl, data->path);
-        prev = FolderBrowser_InsertItem(tree, &shell_file_info, TVI_ROOT, prev, data);
+//         FolderItemData *data = (FolderItemData*)calloc(1, sizeof(FolderItemData));
+//         data->level = 0;
+//         SHGetPathFromIDListW(abs_pidl, data->path);
+//         prev = FolderBrowser_InsertItem(tree, &shell_file_info, TVI_ROOT, prev, data);
 
-        CoTaskMemFree(abs_pidl);
-        CoTaskMemFree(item_pidl);
-    }
+//         CoTaskMemFree(abs_pidl);
+//         CoTaskMemFree(item_pidl);
+//     }
 
-    desktop_shell_folder->Release();
-    drives_shell_folder->Release();
-    enum_id_list->Release();
-    CoTaskMemFree(folder_pidl);
-}
+//     desktop_shell_folder->Release();
+//     drives_shell_folder->Release();
+//     enum_id_list->Release();
+//     CoTaskMemFree(folder_pidl);
+// }
 
 void 
 FolderBrowser_FillRoot(FolderBrowserTree *tree)
@@ -395,6 +430,7 @@ FolderBrowser_FillRoot(FolderBrowserTree *tree)
         quick_access_data->level = 0;
         quick_access_data->has_items = true;
         quick_access_data->items_checked = true;
+        quick_access_data->expanded = true;
         quick_access_item = FolderBrowser_InsertText(tree, L"Quick Access", TVI_ROOT, prev, quick_access_data);
         for(int i = 0; i < count_found; i++)
         {
@@ -415,6 +451,7 @@ FolderBrowser_FillRoot(FolderBrowserTree *tree)
             CoTaskMemFree(abs_pidl);
         }
         prev = quick_access_item;
+        TreeView_Expand(tree->hwnd, quick_access_item, TVE_EXPAND);
     }
 
     FindDrives(pidls, ARRAYSIZE(pidls), &count_found);
