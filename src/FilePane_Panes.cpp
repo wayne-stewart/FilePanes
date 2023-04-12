@@ -153,6 +153,11 @@ void InitFolderBrowserPaneUI(Pane *pane)
 
 Pane* InitExplorerBrowserPane(Pane *parent)
 {
+    return InitExplorerBrowserPane(parent, NULL);
+}
+
+Pane* InitExplorerBrowserPane(Pane *parent, LPCWSTR path)
+{
     ASSERT(parent!=NULL&&parent->content_type==PaneType::Container,L"Explorer Parent must be a container!");
 
     // create the Pane
@@ -161,7 +166,7 @@ Pane* InitExplorerBrowserPane(Pane *parent)
     pane->content_type = PaneType::ExplorerBrowser;
     parent->content.container.rpane_id = pane->id;
 
-    InitExplorerBrowserPaneUI(pane, NULL);
+    InitExplorerBrowserPaneUI(pane, path);
 
     return pane;
 }
@@ -232,6 +237,9 @@ void SplitPane(Pane *explorer_pane, SplitType split_type, SplitDirection split_d
 {
     ASSERT(explorer_pane!=NULL&&explorer_pane->content_type==PaneType::ExplorerBrowser, L"Only split explorer panes!");
 
+    WCHAR path_buffer[MAX_PATH] = {};
+    ASSERT(ExplorerBrowser_GetPath(explorer_pane, (LPWSTR)&path_buffer, ARRAYSIZE(path_buffer)), L"Cannot find path!");
+
     Pane *parent_container_pane = FilePane_GetPaneById(explorer_pane->parent_id);
 
     ASSERT(parent_container_pane->content_type==PaneType::Container, L"Parent of explorer was not a container!");
@@ -254,7 +262,7 @@ void SplitPane(Pane *explorer_pane, SplitType split_type, SplitDirection split_d
         parent_container_pane->content.container.rpane_id = container_pane->id;
     }
 
-    Pane *pane = InitExplorerBrowserPane(container_pane);
+    Pane *pane = InitExplorerBrowserPane(container_pane, path_buffer);
 
     FilePane_SetFocus(pane->id);
 }

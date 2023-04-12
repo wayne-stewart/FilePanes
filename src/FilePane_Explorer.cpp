@@ -182,6 +182,13 @@ void ExplorerBrowser_SetPath(LPCWSTR path, Pane *pane)
     }
 }
 
+bool ExplorerBrowser_GetPath(Pane *pane, WCHAR *path_buffer, int buffer_size)
+{
+    if (pane == NULL || pane->content_type != PaneType::ExplorerBrowser) return false;
+    Edit_GetText(pane->content.explorer.txt_path, path_buffer, buffer_size);
+    return true;
+}
+
 void ExplorerBrowser_HandleDeleteKeyPress()
 {
     Pane *pane = FilePane_GetActiveExplorerPane();

@@ -17,7 +17,7 @@ The goal of this project is to create a multi-paned file explorer using the wind
 - [x] - default should just show drive letters and home
 - [x] - integrate one drive
 - [ ] show network login for remote shares
-- [ ] new pane after split should be same directory of pane being split
+- [x] new pane after split should be same directory of pane being split
 
 
 ## v0.1

@@ -284,6 +284,7 @@ void RunMainWindowLoopWhileMessagesExist();
 void FolderBrowser_OnItemPaint(FolderBrowserTree *tree, LPNMTVCUSTOMDRAW nmtvcd);
 void FolderBrowser_FillItem(FolderBrowserTree *tree, TVITEMW *parent);
 void ExplorerBrowser_SetPath(LPCWSTR path, Pane *pane);
+bool ExplorerBrowser_GetPath(Pane *pane, LPWSTR buffer, int buffer_size);
 void SplitPane(Pane *explorer_pane, SplitType split_type, SplitDirection split_direction, float split_value);
 void RemovePane(Pane *pane);
 void ComputeLayout(HWND hwnd);
@@ -313,6 +314,7 @@ Pane* FilePane_GetExplorerPaneByPt(POINT pt);
 Pane* InitContainerPane(HWND hwnd);
 void InitFolderBrowserPane(Pane *parent);
 Pane* InitExplorerBrowserPane(Pane *parent);
+Pane* InitExplorerBrowserPane(Pane *parent, LPCWSTR path);
 void SplitPane(Pane *explorer_pane, SplitType split_type, SplitDirection split_direction, float split_value);
 void ReplaceParentWithChildOnGrandParent(Pane *grand_parent, Pane *parent, Pane *child);
 void RemovePane(Pane *pane);
@@ -560,8 +562,10 @@ void FilePane_SaveState()
             StringBuilder_Append(&sb, L"%d\n", pane->content.container.rpane_id);
         }
         else if (pane->content_type == PaneType::ExplorerBrowser) {
-            Edit_GetText(pane->content.explorer.txt_path, (LPWSTR)&path_buffer, ARRAYSIZE(path_buffer));
-            StringBuilder_Append(&sb, L"%ls\n", path_buffer);
+            //Edit_GetText(pane->content.explorer.txt_path, (LPWSTR)&path_buffer, ARRAYSIZE(path_buffer));
+            if (ExplorerBrowser_GetPath(pane, (LPWSTR)&path_buffer, ARRAYSIZE(path_buffer))) {
+                StringBuilder_Append(&sb, L"%ls\n", path_buffer);
+            }
         }
     }
 
