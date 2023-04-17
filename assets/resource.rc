@@ -4,7 +4,14 @@
 #define VER_VERSION         0,2,0,0
 #define VER_VERSION_STR     "0.2.0\0"
 
-AppIcon     ICON    appicon2.ico
+AppIcon             ICON    appicon2.ico
+QuickAccessIcon     ICON    star_filled_16.ico
+BackIcon            ICON    back_24.ico
+SplitHorizontalIcon ICON    border_horizontal_24.ico
+SplitVerticalIcon   ICON    border_vertical_24.ico
+CloseIcon           ICON    close_24.ico
+RefreshIcon         ICON    refresh_24.ico
+UpIcon              ICON    up_24.ico
 
 VS_VERSION_INFO VERSIONINFO
 FILEVERSION        VER_VERSION

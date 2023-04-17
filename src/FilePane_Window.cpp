@@ -72,42 +72,22 @@ Button_OnCustomDraw(LPNMCUSTOMDRAW pnmcd)
             ButtonFunction function = (ButtonFunction)HIBYTE(LOWORD(ref_data));
 
             if (function == ButtonFunction::SplitHorizontal) {
-                PointF local_points[ARRAYSIZE(g_horizontal_split_points)];
-                memcpy(local_points, g_horizontal_split_points, sizeof(g_horizontal_split_points));
-                Center(local_points, ARRAYSIZE(local_points), fx, fy, fw, fh);
-                g.FillPolygon(&gbrush, local_points, 8);
-                g.FillPolygon(&gbrush, local_points+8, 4);
-                g.FillPolygon(&gbrush, local_points+8+4, 8);
+                DrawIconEx(pnmcd->hdc, 3,3, g_split_horizontal_ico,24,24,NULL,NULL,DI_NORMAL);
             }
             else if (function == ButtonFunction::SplitVertical) {
-                PointF local_points[ARRAYSIZE(g_vertical_split_points)];
-                memcpy(local_points, g_vertical_split_points, sizeof(g_vertical_split_points));
-                Center(local_points, ARRAYSIZE(local_points), fx, fy, fw, fh);
-                g.FillPolygon(&gbrush, local_points, 8);
-                g.FillPolygon(&gbrush, local_points+8, 4);
-                g.FillPolygon(&gbrush, local_points+8+4, 8);
+                DrawIconEx(pnmcd->hdc, 3, 3, g_split_vertical_ico,24,24,NULL,NULL,DI_NORMAL);
             }
             else if (function == ButtonFunction::Up) {
-                PointF local_points[ARRAYSIZE(g_up_points)];
-                memcpy(local_points, g_up_points, sizeof(g_up_points));
-                DrawPointsAsLinePairsCenteredInBox(&g, &pen, local_points, ARRAYSIZE(local_points), fx, fy, fw, fh);
+                DrawIconEx(pnmcd->hdc, 3, 3, g_up_ico,24,24,NULL,NULL,DI_NORMAL);
             }
             else if (function == ButtonFunction::Back) {
-                PointF local_points[ARRAYSIZE(g_up_points)];
-                memcpy(local_points, g_back_points, sizeof(g_back_points));
-                DrawPointsAsLinePairsCenteredInBox(&g, &pen, local_points, ARRAYSIZE(local_points), fx, fy, fw, fh);
+                DrawIconEx(pnmcd->hdc, 3, 3, g_back_ico,24,24,NULL,NULL,DI_NORMAL);
             }
             else if (function == ButtonFunction::Refresh) {
-                //RECT
-                g.SetSmoothingMode(Gdiplus::SmoothingMode::SmoothingModeAntiAlias);
-                g.DrawArc(&pen, 6.0f, 6.0f, 16.0f, 16.0f, -60.0f, 290.0f);
-                PointF points[] = { {5.0f, 5.0f}, {13.0f, 13.0f}, {13.0f, 5.0f} };
-                g.FillPolygon(&gbrush, points, ARRAYSIZE(points));
+                DrawIconEx(pnmcd->hdc, 3, 3, g_refresh_ico,24,24,NULL,NULL,DI_NORMAL);
             }
             else if (function == ButtonFunction::Remove) {
-                PointF local_points[ARRAYSIZE(g_remove_points)];
-                memcpy(local_points, g_remove_points, sizeof(g_remove_points));
-                DrawPointsAsLinePairsCenteredInBox(&g, &pen, local_points, ARRAYSIZE(local_points), fx, fy, fw, fh);
+                DrawIconEx(pnmcd->hdc, 3, 3, g_close_ico,24,24,NULL,NULL,DI_NORMAL);
             }
 
             return CDRF_SKIPDEFAULT;

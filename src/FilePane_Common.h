@@ -326,6 +326,15 @@ HWND g_main_window_hwnd;
 HINSTANCE g_hinstance;
 CLIPFORMAT CF_PREFFEREDDROPEFFECT;
 
+HICON g_quick_access_ico;
+int g_quick_access_idx;
+HICON g_split_horizontal_ico;
+HICON g_split_vertical_ico;
+HICON g_back_ico;
+HICON g_up_ico;
+HICON g_refresh_ico;
+HICON g_close_ico;
+
 #define MAX_PANES 50
 int g_panes_count = 0;
 Pane g_panes[MAX_PANES] = {};

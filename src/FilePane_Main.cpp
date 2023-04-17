@@ -56,7 +56,6 @@ void ComputeLayout(RECT *rc, Pane *pane)
         SHRINK_RECT(pane->rc, HALF_FRAME_WIDTH);
         
         int button_dim = 30;
-        int status_dim = 0;
 
         RECT pos, offset;
         pos.left = pane->rc.left;
@@ -96,7 +95,7 @@ void ComputeLayout(RECT *rc, Pane *pane)
         pos.left = pane->rc.left;
         pos.right = pane->rc.right;
         pos.top = pos.bottom;
-        pos.bottom = pane->rc.bottom - status_dim;
+        pos.bottom = pane->rc.bottom;
         pane->content.explorer.browser->SetRect(NULL, pos);
     } else if (pane->content_type == PaneType::FolderBrowser) {
         pane->rc = *rc;
@@ -355,6 +354,14 @@ wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdS
     // Initialize GDI+.
     GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
 
+    g_quick_access_ico = (HICON)LoadImage(hInstance, L"QuickAccessIcon", IMAGE_ICON, 0, 0, NULL);
+    g_back_ico = (HICON)LoadImage(hInstance, L"BackIcon", IMAGE_ICON, 0, 0, NULL);
+    g_up_ico = (HICON)LoadImage(hInstance, L"UpIcon", IMAGE_ICON, 0, 0, NULL);
+    g_split_horizontal_ico = (HICON)LoadImage(hInstance, L"SplitHorizontalIcon", IMAGE_ICON, 0, 0, NULL);
+    g_split_vertical_ico = (HICON)LoadImage(hInstance, L"SplitVerticalIcon", IMAGE_ICON, 0, 0, NULL);
+    g_close_ico = (HICON)LoadImage(hInstance, L"CloseIcon", IMAGE_ICON, 0, 0, NULL);
+    g_refresh_ico = (HICON)LoadImage(hInstance, L"RefreshIcon", IMAGE_ICON, 0, 0, NULL);
+
     Scale(g_right_arrow_points, ARRAYSIZE(g_right_arrow_points), 10.0f/6.0f);
     Scale(g_vertical_split_points, ARRAYSIZE(g_vertical_split_points), 18.0f/6.0f);
     Scale(g_horizontal_split_points, ARRAYSIZE(g_horizontal_split_points), 18.0f/6.0f);
@@ -396,6 +403,13 @@ wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdS
     CoUninitialize();
     GdiplusShutdown(gdiplusToken);
 
+    DestroyIcon(g_quick_access_ico);
+    DestroyIcon(g_back_ico);
+    DestroyIcon(g_up_ico);
+    DestroyIcon(g_split_horizontal_ico);
+    DestroyIcon(g_split_vertical_ico);
+    DestroyIcon(g_close_ico);
+    DestroyIcon(g_refresh_ico);
 
     return 0;
 }

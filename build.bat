@@ -23,14 +23,33 @@ rem LINKER FLAGS
 rem /DEBUG:FULL		- compiles the exe for debug with separate pdb file, use with /Zi
 rem /MANIFEST:EMBED	- embeds the manifiest in the exe instead of creating a .manifest file
 
-cl.exe ../src/FilePane_Main.cpp /MT /O2 /Wall /WX /Qspectre /FeFilePanes.exe /link filepane.res /MANIFEST:EMBED
+set arg1=%1
+set arg2=%2
 
+REM BUILD AND RUN SHELL IMAGES
+if %arg1%.==img. goto IMG
+goto SKIP_IMG
+
+:IMG
+cl.exe ../src/shell_images.cpp /MT /Zi /Wall /WX /Qspectre /FeShellImages_DEBUG.exe /link /DEBUG:FULL filepane.res /MANIFEST:EMBED
+if %arg2%.==run. goto RUN_IMG
+goto END
+
+:RUN_IMG
+ShellImages_DEBUG.exe
+goto END
+
+:SKIP_IMG
+
+REM BUILD AND RUN FILE PANES
+if %arg1%.==fp. goto FP
+goto SKIP_FP
+:FP
+cl.exe ../src/FilePane_Main.cpp /MT /O2 /Wall /WX /Qspectre /FeFilePanes.exe /link filepane.res /MANIFEST:EMBED
 cl.exe ../src/FilePane_Main.cpp /MT /Zi /Wall /WX /Qspectre /FeFilePanes_DEBUG.exe /link /DEBUG:FULL filepane.res /MANIFEST:EMBED
 
-set arg1=%1
-
-if %arg1%.==run. goto RUN
-if %arg1%.==debug. goto DEBUG
+if %arg2%.==run. goto RUN
+if %arg2%.==debug. goto DEBUG
 goto END
 
 :RUN
@@ -40,5 +59,8 @@ goto END
 :DEBUG
 FilePanes_DEBUG.exe
 goto END
+
+:SKIP_FP
+
 
 :END

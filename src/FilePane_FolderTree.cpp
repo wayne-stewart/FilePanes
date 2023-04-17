@@ -240,6 +240,8 @@ FolderBrowser_Create(FolderBrowserTree *tree, HWND parent, HINSTANCE hInstance, 
     // Create and Associate the image list with the tree-view control. 
     SHGetImageList(SHIL_SMALL, IID_IImageList, (void **)&tree->image_list);
     TreeView_SetImageList(hwnd_tree, tree->image_list, TVSIL_NORMAL); 
+    g_quick_access_idx = ImageList_AddIcon(tree->image_list, g_quick_access_ico);
+    ASSERT(g_quick_access_idx != -1, L"Failed to add filled star icon to image list");
 
     // set top and bottom padding to 3px by adding 6 to height
     int item_height = TreeView_GetItemHeight(hwnd_tree);
@@ -284,7 +286,7 @@ FolderBrowser_InsertText(FolderBrowserTree *tree, LPCWSTR text, HTREEITEM parent
 
     tvi.pszText = (LPWSTR)text;
     tvi.cchTextMax = (int)wcslen(text);
-    tvi.iImage = 69; // 3 yellow folder, 15 monitor, 22 magnifier glass, 31 recycle bin, 43 yellow star, 69 quick access
+    tvi.iImage = g_quick_access_idx;
     tvi.lParam = LPARAM(data);
     tvi.cChildren = 1;
     tvi.state = 0;
