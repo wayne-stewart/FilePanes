@@ -1,6 +1,12 @@
 
-rem call "C:\Program Files (x86)\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
-call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+if exist "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat" (
+	call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+) else if exist "C:\Program Files (x86)\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat" (
+	call "C:\Program Files (x86)\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
+) else (
+	echo "Visual Studio not found"
+	exit /b 1
+)
 
 if not exist build (
 	mkdir build
@@ -9,7 +15,8 @@ pushd build
 del /s *.obj *.exe *.res *.manifest *.pdb *.ilk
 
 rem compile the resource (.rc) file so it can be embedded in the exe
-rc /fo filepane.res ../assets/resource.rc
+rc /fo resource.res ../assets/resource.rc
+rc /fo resource_ptoi.res ../assets/resource_png_to_ico.rc
 
 rem COMPILER FLAGS
 rem /MT			- enable multi-threaded and statically linked libraries
@@ -23,44 +30,9 @@ rem LINKER FLAGS
 rem /DEBUG:FULL		- compiles the exe for debug with separate pdb file, use with /Zi
 rem /MANIFEST:EMBED	- embeds the manifiest in the exe instead of creating a .manifest file
 
-set arg1=%1
-set arg2=%2
+cl.exe ../src/png_to_ico.cpp /MT /O2 /Wall /WX /Qspectre /Feptoi.exe /link resource_ptoi.res /MANIFEST:EMBED
+rem cl.exe ../src/png_to_ico.cpp /MT /Zi /Wall /WX /Qspectre /Feptoi.exe /link /DEBUG:FULL resource_ptoi.res /MANIFEST:EMBED
 
-REM BUILD AND RUN SHELL IMAGES
-if %arg1%.==img. goto IMG
-goto SKIP_IMG
+cl.exe ../src/FilePane_Main.cpp /MT /O2 /Wall /WX /Qspectre /FeFilePanes.exe /link resource.res /MANIFEST:EMBED
+cl.exe ../src/FilePane_Main.cpp /MT /Zi /Wall /WX /Qspectre /FeFilePanes_DEBUG.exe /link /DEBUG:FULL resource.res /MANIFEST:EMBED
 
-:IMG
-cl.exe ../src/shell_images.cpp /MT /Zi /Wall /WX /Qspectre /FeShellImages_DEBUG.exe /link /DEBUG:FULL filepane.res /MANIFEST:EMBED
-if %arg2%.==run. goto RUN_IMG
-goto END
-
-:RUN_IMG
-ShellImages_DEBUG.exe
-goto END
-
-:SKIP_IMG
-
-REM BUILD AND RUN FILE PANES
-if %arg1%.==fp. goto FP
-goto SKIP_FP
-:FP
-cl.exe ../src/FilePane_Main.cpp /MT /O2 /Wall /WX /Qspectre /FeFilePanes.exe /link filepane.res /MANIFEST:EMBED
-cl.exe ../src/FilePane_Main.cpp /MT /Zi /Wall /WX /Qspectre /FeFilePanes_DEBUG.exe /link /DEBUG:FULL filepane.res /MANIFEST:EMBED
-
-if %arg2%.==run. goto RUN
-if %arg2%.==debug. goto DEBUG
-goto END
-
-:RUN
-FilePanes.exe
-goto END
-
-:DEBUG
-FilePanes_DEBUG.exe
-goto END
-
-:SKIP_FP
-
-
-:END

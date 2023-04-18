@@ -105,15 +105,12 @@ FolderBrowser_OnItemPaint(FolderBrowserTree *tree, LPNMTVCUSTOMDRAW nmtvcd)
         g.FillRectangle(&bk_white_brush, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top);
     }  
 
-    PointF local_points[6];
-    memcpy(local_points, g_right_arrow_points, sizeof(g_right_arrow_points));
-    float h = GetHeight(local_points, ARRAYSIZE(local_points));
-    float w = GetWidth(local_points, ARRAYSIZE(local_points));
+    float w = 16;
     indent += 5;
     if (show_arrow)
     {
-        Translate(local_points, ARRAYSIZE(local_points), fx + float(indent), fy + (fh - h)/2.0f);
-        g.FillPolygon(&arrow_brush, local_points, ARRAYSIZE(local_points));
+        HICON icon = data->expanded ? g_chevron_down_ico : g_chevron_right_ico;
+        DrawIconEx(hdc, int(fx) + indent, int(fy + ((fh - 16) / 2)), icon, 16, 16, 0, NULL, DI_NORMAL);
     }
 
     int cx,cy;
@@ -174,7 +171,7 @@ FolderBrowser_SubClassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UI
                 Pane *explorer_pane = FilePane_GetActiveExplorerPane();
                 FolderItemData *data = (FolderItemData*)item.lParam;
                 int chevron_start = data->level * 15;
-                int chevron_end = chevron_start + 15;
+                int chevron_end = chevron_start + 18;
                 if ((pts.x > chevron_start && pts.x < chevron_end) // first check for the arrow position
                     && (data->items_checked == 0 || data->has_items)) // do expand logic we haven't items_checked before OR it has items
                 {

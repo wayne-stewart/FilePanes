@@ -334,100 +334,12 @@ HICON g_back_ico;
 HICON g_up_ico;
 HICON g_refresh_ico;
 HICON g_close_ico;
+HICON g_chevron_right_ico;
+HICON g_chevron_down_ico;
 
 #define MAX_PANES 50
 int g_panes_count = 0;
 Pane g_panes[MAX_PANES] = {};
-
-PointF g_right_arrow_points[6] = {
-     {1,0}
-    ,{4,3}
-    ,{1,6}
-    ,{0,5}
-    ,{2,3}
-    ,{0,1}
-};
-
-PointF g_vertical_split_points[8+4+8] = {
-    // left bracket
-     {0,0}
-    ,{2,0}
-    ,{2,1}
-    ,{1,1}
-    ,{1,5}
-    ,{2,5}
-    ,{2,6}
-    ,{0,6}
-
-    // center line
-    ,{2.5,0}
-    ,{3.3f,0}
-    ,{3.3f,6}
-    ,{2.5,6}
-
-    // right bracket
-    ,{4,0}
-    ,{6,0}
-    ,{6,6}
-    ,{4,6}
-    ,{4,5}
-    ,{5,5}
-    ,{5,1}
-    ,{4,1}
-};
-
-PointF g_horizontal_split_points[8+4+8] = {
-    // top bracket
-     {0,0}
-    ,{6,0}
-    ,{6,2}
-    ,{5,2}
-    ,{5,1}
-    ,{1,1}
-    ,{1,2}
-    ,{0,2}
-
-    // center line
-    ,{0,2.5}
-    ,{6,2.5}
-    ,{6,3.3f}
-    ,{0,3.3f}
-
-    // bottom bracket
-    ,{0,4}
-    ,{1,4}
-    ,{1,5}
-    ,{5,5}
-    ,{5,4}
-    ,{6,4}
-    ,{6,6}
-    ,{0,6}
-};
-
-PointF g_back_points[] = {
-     {0,2}
-    ,{6,2}
-    ,{0,2}
-    ,{2.5,0}
-    ,{0,2}
-    ,{2.5,4}
-};
-
-PointF g_up_points[] = {
-     {2,0}
-    ,{2,6}
-    ,{2,0}
-    ,{0,2.5}
-    ,{2,0}
-    ,{4,2.5}
-};
-
-PointF g_remove_points[] = {
-     {0,0}
-    ,{5,5}
-    ,{5,0}
-    ,{0,5}
-};
 
 HCURSOR g_idc_sizewe;
 HCURSOR g_idc_sizens;

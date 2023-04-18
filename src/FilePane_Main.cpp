@@ -361,13 +361,8 @@ wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdS
     g_split_vertical_ico = (HICON)LoadImage(hInstance, L"SplitVerticalIcon", IMAGE_ICON, 0, 0, NULL);
     g_close_ico = (HICON)LoadImage(hInstance, L"CloseIcon", IMAGE_ICON, 0, 0, NULL);
     g_refresh_ico = (HICON)LoadImage(hInstance, L"RefreshIcon", IMAGE_ICON, 0, 0, NULL);
-
-    Scale(g_right_arrow_points, ARRAYSIZE(g_right_arrow_points), 10.0f/6.0f);
-    Scale(g_vertical_split_points, ARRAYSIZE(g_vertical_split_points), 18.0f/6.0f);
-    Scale(g_horizontal_split_points, ARRAYSIZE(g_horizontal_split_points), 18.0f/6.0f);
-    Scale(g_up_points, ARRAYSIZE(g_up_points), 18.0f/6.0f);
-    Scale(g_back_points, ARRAYSIZE(g_back_points), 18.0f/6.0f);
-    Scale(g_remove_points, ARRAYSIZE(g_remove_points), 18.0f/6.0f);
+    g_chevron_right_ico = (HICON)LoadImage(hInstance, L"ChevronRightIcon", IMAGE_ICON, 0, 0, NULL);
+    g_chevron_down_ico = (HICON)LoadImage(hInstance, L"ChevronDownIcon", IMAGE_ICON, 0, 0, NULL);
 
     // required for all COM calls later
     hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
