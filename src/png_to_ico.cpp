@@ -26,6 +26,20 @@
 // this is fine.
 #pragma warning(disable:4710)
 
+void write_little_endian_u16(unsigned char *buffer, uint16_t value)
+{
+    buffer[0] = (unsigned char)(value & 0xFF);
+    buffer[1] = (unsigned char)((value >> 8) & 0xFF);
+}
+
+void write_little_endian_u32(unsigned char *buffer, uint32_t value)
+{
+    buffer[0] = (unsigned char)(value & 0xFF);
+    buffer[1] = (unsigned char)((value >> 8) & 0xFF);
+    buffer[2] = (unsigned char)((value >> 16) & 0xFF);
+    buffer[3] = (unsigned char)((value >> 24) & 0xFF);
+}
+
 int main(int argc, char *argv[])
 {
     const int BUFFER_SIZE = 4096;
@@ -132,31 +146,20 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    // ICONDIR header
-    write_buffer[0] = 0;    // reserved 0
-    write_buffer[1] = 0;
-    write_buffer[2] = 1;    // 1 for ico, 2 for cur ( 2 bytes )
-    write_buffer[3] = 0;
-    write_buffer[4] = 1;    // number of images ( 2 bytes )
-    write_buffer[5] = 0;
+    // ICONDIR header ( 6 bytes )
+    write_little_endian_u16(write_buffer, 0);    // reserved 0
+    write_little_endian_u16(&write_buffer[2], 1);    // 1 for ico, 2 for cur ( 2 bytes )
+    write_little_endian_u16(&write_buffer[4], 1);    // number of images ( 2 bytes )
 
-    // ICONDIRENTRY header
+    // ICONDIRENTRY header ( 16 bytes )
     write_buffer[6] = 16;   // image width
     write_buffer[7] = 16;   // image height
     write_buffer[8] = 0;    // number of colors - 0 for no color palette
     write_buffer[9] = 0;    // reserved 0
-    write_buffer[10] = 1;   // ico color planes OR cur hotspot x ( 2 bytes )
-    write_buffer[11] = 0;   
-    write_buffer[12] = 32;  // ico bits per pixel OR cur hotspot y ( 2 bytes )
-    write_buffer[13] = 0;
-    write_buffer[14] = (unsigned char)(dw & 0xFF);
-    write_buffer[15] = (unsigned char)((dw >> 8) & 0xFF);
-    write_buffer[16] = (unsigned char)((dw >> 16) & 0xFF);
-    write_buffer[17] = (unsigned char)((dw >> 24) & 0xFF); // image data size ( 4 bytes )
-    write_buffer[18] = 22;  // image data offset ( 4 bytes )
-    write_buffer[19] = 0;
-    write_buffer[20] = 0;
-    write_buffer[21] = 0;
+    write_little_endian_u16(&write_buffer[10], 1);   // ico color planes OR cur hotspot x ( 2 bytes )
+    write_little_endian_u16(&write_buffer[12], 32);  // ico bits per pixel OR cur hotspot y ( 2 bytes )
+    write_little_endian_u32(&write_buffer[14], dw); // image data size ( 4 bytes )
+    write_little_endian_u32(&write_buffer[18], 22); // image data offset ( 4 bytes )
 
     // write the header
     WriteFile(dst_file, write_buffer, 22, &dw, NULL);
