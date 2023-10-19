@@ -19,6 +19,7 @@ The goal of this project is to create a multi-paned file explorer using the wind
 - [ ] show network login for remote shares
 - [x] new pane after split should be same directory of pane being split
 - [x] converted button icons to icos instead of the strange rendering done before
+- [ ] make config loading/saving more fault tolerant
 
 
 ## v0.1
