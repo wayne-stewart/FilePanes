@@ -207,6 +207,26 @@ FolderBrowser_SubClassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UI
                 //Alert(L"No Item Found");
             }
         } break;
+        case WM_RBUTTONDOWN: {
+            POINTS pts = MAKEPOINTS(lParam);
+            TVITEMW item;
+            WCHAR buffer[260] = {};
+            if (FolderBrowser_HitTest(hwnd, pts, &item, buffer, ARRAYSIZE(buffer)))
+            {
+                //MessageBoxW(NULL, L" R BUTTON DOWN", L"Click message", MB_OK);
+                //HWND dlg = 
+                //CreateWindowExW(0, WC_DIALOG, L"My Dialog", WS_OVERLAPPEDWINDOW | WS_VISIBLE, pts.x, pts.y, 100, 200, hwnd, 0, g_hinstance, 0);
+                POINT screen_pt = {0};
+                GetCursorPos(&screen_pt);
+                HMENU menu = CreatePopupMenu();
+                InsertMenuW(menu, 0, MF_BYPOSITION | MF_STRING, 1, L"Add to Favorites");
+                SetForegroundWindow(hwnd);
+                int cmd = TrackPopupMenu(menu, TPM_BOTTOMALIGN | TPM_RETURNCMD, screen_pt.x, screen_pt.y, 0, hwnd, 0);
+                if (cmd == 1) {
+                    MessageBoxW(NULL, item.pszText, L"Click message", MB_OK);
+                }
+            }
+        } break;
     }
     return DefSubclassProc(hwnd, msg, wParam, lParam);
 }

@@ -31,10 +31,10 @@ rem /DEBUG:FULL			- compiles the exe for debug with separate pdb file, use with 
 rem /MANIFEST:EMBED		- embeds the manifiest in the exe instead of creating a .manifest file
 rem <resource_file>.res	- embeds the resource file in the exe
 
-cl.exe ../src/png_to_ico.cpp /MT /O2 /Wall /WX /Qspectre /Fepng_to_ico.exe /link resource_png_to_ico.res /MANIFEST:EMBED
+rem cl.exe ../src/png_to_ico.cpp /MT /O2 /Wall /WX /Qspectre /Fepng_to_ico.exe /link resource_png_to_ico.res /MANIFEST:EMBED
 rem cl.exe ../src/png_to_ico.cpp /MT /Zi /Wall /WX /Qspectre /Feptoi.exe /link /DEBUG:FULL resource_png_to_ico.res /MANIFEST:EMBED
 
-cl.exe ../src/shell_images.cpp /MT /O2 /Wall /WX /Qspectre /Feshell_images.exe /link /MANIFEST:EMBED
+rem cl.exe ../src/shell_images.cpp /MT /O2 /Wall /WX /Qspectre /Feshell_images.exe /link /MANIFEST:EMBED
 rem cl.exe ../src/png_to_ico.cpp /MT /Zi /Wall /WX /Qspectre /Feshell_images.exe /link /DEBUG:FULL /MANIFEST:EMBED
 
 cl.exe ../src/FilePane_Main.cpp /MT /O2 /Wall /WX /Qspectre /FeFilePanes.exe /link resource_filepanes.res /MANIFEST:EMBED

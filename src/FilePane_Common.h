@@ -6,9 +6,10 @@
 
 // 4668 warns when replacing macro definitions with 0.
 // 4458 warns when one definition hides another.
+// 4577 warns when 'noexcept' is used without exception handling being specified, suggests /EHsc
 // I don't need to be warned about what is in Microsoft's header files.
 #pragma warning(push)
-#pragma warning(disable:4668 4458)
+#pragma warning(disable:4668 4458 4577)
 
 #include <windows.h>
 #include <windowsx.h>           // for WM_COMMAND handling macros
